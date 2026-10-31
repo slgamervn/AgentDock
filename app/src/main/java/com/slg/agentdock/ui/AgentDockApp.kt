@@ -668,7 +668,7 @@ private fun TabListItem(
                     },
                     enabled = editableTitle.isNotBlank(),
                 ) {
-                    Text(stringResource(R.string.save_settings))
+                    Text(stringResource(R.string.rename))
                 }
             },
             dismissButton = {

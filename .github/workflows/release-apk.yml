@@ -51,8 +51,8 @@ jobs:
           [[ -n "$AGENTDOCK_KEYSTORE_PASSWORD" ]] || missing+=(AGENTDOCK_KEYSTORE_PASSWORD)
           [[ -n "$AGENTDOCK_KEY_ALIAS" ]] || missing+=(AGENTDOCK_KEY_ALIAS)
           [[ -n "$AGENTDOCK_KEY_PASSWORD" ]] || missing+=(AGENTDOCK_KEY_PASSWORD)
-          if (( \${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Actions secrets: %s\n' "\${missing[*]}" >&2
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required GitHub Actions secrets: %s\n' "${missing[*]}" >&2
             exit 1
           fi
           KEYSTORE_PATH="$RUNNER_TEMP/agentdock-upload.jks"
