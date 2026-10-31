@@ -41,6 +41,7 @@
     <string name="rename_tab_hint">Enter a tab name</string>
     <string name="restore_closed_tab">Reopen closed tab</string>
     <string name="cancel">Cancel</string>
+    <string name="rename">Rename</string>
     <string name="settings_title">Settings</string>
     <string name="server_section">AgentDock server</string>
     <string name="server_url_label">Server address</string>

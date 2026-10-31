@@ -41,6 +41,7 @@
     <string name="rename_tab_hint">Nhập tên tab</string>
     <string name="restore_closed_tab">Mở lại tab đã đóng</string>
     <string name="cancel">Hủy</string>
+    <string name="rename">Đổi tên</string>
     <string name="settings_title">Cài đặt</string>
     <string name="server_section">Máy chủ AgentDock</string>
     <string name="server_url_label">Địa chỉ máy chủ</string>
