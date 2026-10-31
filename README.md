@@ -19,6 +19,7 @@
 - DataStore Preferences cho tab, bản nháp và địa chỉ máy chủ cục bộ ở giai đoạn nền tảng.
 - `applicationId`: `com.slg.agentdock` (giữ ổn định để hỗ trợ cập nhật đè).
 - `minSdk`: 23; `compileSdk`: 36; `targetSdk`: 36.
+- Jetpack Compose BOM `2026.06.00` (Compose 1.11) and Lifecycle `2.10.0` are pinned to the stable Android 16/API 36 toolchain; Compose 1.12 requires API 37.
 - Android Gradle Plugin 9.5.0, Gradle 9.6.1, JDK 17.
 
 Các phiên bản công cụ và thư viện được pin cụ thể; không dùng dynamic version (`+`).
