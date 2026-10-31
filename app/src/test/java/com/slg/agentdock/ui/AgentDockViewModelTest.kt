@@ -13,6 +13,8 @@ import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -191,7 +193,7 @@ private class FakeWorkspaceRepository(
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-private class MainDispatcherRule(
+class MainDispatcherRule(
     val dispatcher: TestDispatcher = StandardTestDispatcher(),
 ) : TestWatcher() {
     override fun starting(description: Description) {
