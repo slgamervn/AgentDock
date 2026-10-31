@@ -16,6 +16,7 @@ jobs:
   release:
     name: Build signed release APK
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -28,14 +29,15 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
-        with:
-          gradle-version: '9.6.1'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
       - name: Install Android SDK packages
         run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Run release preflight checks
+        run: ./gradlew --no-daemon --stacktrace lintDebug testDebugUnitTest
 
       - name: Validate and prepare signing key
         shell: bash
@@ -77,7 +79,7 @@ jobs:
           [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { echo "Invalid workflow run number for versionCode" >&2; exit 1; }
           [[ "$VERSION_CODE" -le 2100000000 ]] || { echo "versionCode exceeds Android's supported range" >&2; exit 1; }
           [[ "$VERSION_NAME" =~ ^[0-9A-Za-z][0-9A-Za-z.+_-]*$ ]] || { echo "version_name contains unsupported characters" >&2; exit 1; }
-          gradle --no-daemon --stacktrace \
+          ./gradlew --no-daemon --stacktrace \
             -PagentdockVersionCode="$VERSION_CODE" \
             -PagentdockVersionName="$VERSION_NAME" \
             assembleRelease

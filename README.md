@@ -26,6 +26,8 @@
 
 ## Build và kiểm thử
 
+Android CI và workflow ký APK đều dùng Gradle Wrapper 9.6.1; `gradle/actions/setup-gradle@v6` tự xác thực Wrapper JAR và quản lý cache. Workflow ký APK chạy lint/unit tests trước khi nạp khóa ký.
+
 Android CI chạy:
 - `lintDebug`
 - `testDebugUnitTest` (kiểm tra trạng thái ViewModel, vòng đời tab, debounce và lưu địa chỉ máy chủ)

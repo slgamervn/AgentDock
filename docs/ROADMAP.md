@@ -10,11 +10,12 @@
 - [x] Split the app shell, reusable components and four screen files.
 - [x] Clarify local draft and backend-not-ready states in Workspace.
 - [x] Add Compose navigation and draft-to-workspace UI tests.
-- [ ] Add deterministic ViewModel tests for workspace restoration, tab lifecycle, debounced persistence and server address validation.
+- [x] Add six deterministic ViewModel tests for workspace restoration, tab lifecycle, debounced persistence and server address validation.
 - [x] CI debug build, lint and unit test workflow.
 - [x] Pin Ubuntu runner image to 24.04 during GitHub's ubuntu-latest migration.
 - [x] Verify connected UI tests on the Android 36 emulator (navigation and draft flow).
 - [x] Add the official Gradle 9.6.1 Wrapper scripts/JAR and pin the distribution SHA-256 checksum.
+- [x] Use the verified Gradle Wrapper for both Android CI and the signed-release workflow.
 - [ ] Verify the uploaded JKS alias, certificate and passwords without exposing them.
 
 ## Stage 2 — Backend foundation
