@@ -12,8 +12,8 @@
 - [x] Add Compose navigation and draft-to-workspace UI tests.
 - [x] CI debug build, lint and unit test workflow.
 - [x] Pin Ubuntu runner image to 24.04 during GitHub's ubuntu-latest migration.
-- [ ] Verify connected UI tests on the Android 36 emulator.
-- [ ] Generate and commit the official Gradle Wrapper.
+- [x] Verify connected UI tests on the Android 36 emulator (navigation and draft flow).
+- [x] Add the official Gradle 9.6.1 Wrapper scripts/JAR and pin the distribution SHA-256 checksum.
 - [ ] Verify the uploaded JKS alias, certificate and passwords without exposing them.
 
 ## Stage 2 — Backend foundation

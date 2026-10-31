@@ -48,7 +48,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Run unit tests and build debug APK
-        run: gradle --no-daemon --stacktrace lintDebug testDebugUnitTest assembleDebug
+        run: ./gradlew --no-daemon --stacktrace lintDebug testDebugUnitTest assembleDebug
 
       - name: Run Compose UI tests on Android 36
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
@@ -60,7 +60,7 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -no-snapshot -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: gradle --no-daemon --stacktrace connectedDebugAndroidTest
+          script: ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v7

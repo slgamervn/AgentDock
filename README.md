@@ -16,6 +16,7 @@
 ## Android stack
 
 - Kotlin, Jetpack Compose, Material 3, Navigation Compose.
+- Gradle Wrapper 9.6.1 with official distribution SHA-256 verification.
 - MVVM/UDF; ViewModel phụ thuộc vào `WorkspaceRepository`, không truy cập DataStore trực tiếp.
 - DataStore Preferences là nguồn lưu cục bộ ở giai đoạn nền tảng.
 - `applicationId`: `com.slg.agentdock` (giữ ổn định để hỗ trợ cập nhật đè).
