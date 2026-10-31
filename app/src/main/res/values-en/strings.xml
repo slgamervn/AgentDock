@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AgentDock</string>
@@ -8,7 +9,7 @@
     <string name="show_all_tabs">Open tab switcher</string>
     <string name="add_tab">Add new tab</string>
     <string name="home_title">Start a task</string>
-    <string name="home_description">Describe the outcome you need. AgentDock will take over and organize the work when a server is connected.</string>
+    <string name="home_description">Describe the outcome you need. Your draft stays on this device until the backend is connected.</string>
     <string name="task_prompt_label">What would you like to get done?</string>
     <string name="task_prompt_hint">Describe the goal, context, and expected result…</string>
     <string name="save_draft">Save draft</string>
@@ -26,6 +27,11 @@
     <string name="backend_not_ready_body">AgentDock currently stores drafts on this device only. Agent orchestration, approvals, execution history, and results will be available after the backend is deployed.</string>
     <string name="workspace_sections">No active execution</string>
     <string name="workspace_sections_body">No task has been submitted to a server.</string>
+    <string name="workspace_autosave">Saved locally on this device</string>
+    <string name="workspace_backend_title">Task execution is not available yet</string>
+    <string name="workspace_backend_body">The orchestration backend has not been deployed. This request has not been sent to a server and no Agent is executing it.</string>
+    <string name="workspace_editor_title">Task request</string>
+    <string name="workspace_editor_description">Continue editing this draft. Changes are saved locally automatically.</string>
     <string name="tabs_title">Task tabs</string>
     <string name="tabs_count">%1$d open tabs</string>
     <string name="new_tab">New tab</string>

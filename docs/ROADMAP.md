@@ -1,3 +1,4 @@
+
 # Delivery roadmap
 
 ## Stage 1 — Android foundation
@@ -6,13 +7,14 @@
 - [x] Home / Tabs / Settings navigation.
 - [x] Independent task tabs, rename, pin/close/restore and local draft persistence.
 - [x] Repository boundary between the ViewModel and DataStore.
-- [x] CI debug build and unit test workflow.
-- [x] Isolated manual release workflow using repository secrets.
-- [x] Verify Android CI: lint, unit tests, debug APK build and artifact upload passed.
+- [x] Split the app shell, reusable components and four screen files.
+- [x] Clarify local draft and backend-not-ready states in Workspace.
+- [x] Add Compose navigation and draft-to-workspace UI tests.
+- [x] CI debug build, lint and unit test workflow.
 - [x] Pin Ubuntu runner image to 24.04 during GitHub's ubuntu-latest migration.
+- [ ] Verify connected UI tests on the Android 36 emulator.
 - [ ] Generate and commit the official Gradle Wrapper.
 - [ ] Verify the uploaded JKS alias, certificate and passwords without exposing them.
-- [ ] Split the current Compose screen source into focused screen/component files and add UI navigation tests.
 
 ## Stage 2 — Backend foundation
 

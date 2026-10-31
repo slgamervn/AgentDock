@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AgentDock</string>
@@ -8,7 +9,7 @@
     <string name="show_all_tabs">Mở danh sách tab</string>
     <string name="add_tab">Tạo tab mới</string>
     <string name="home_title">Bắt đầu một công việc</string>
-    <string name="home_description">Mô tả kết quả bạn cần. AgentDock sẽ tiếp nhận và tổ chức công việc khi máy chủ được kết nối.</string>
+    <string name="home_description">Mô tả kết quả bạn cần. Bản nháp sẽ được lưu trên thiết bị cho tới khi backend được kết nối.</string>
     <string name="task_prompt_label">Bạn muốn hoàn thành việc gì?</string>
     <string name="task_prompt_hint">Mô tả mục tiêu, bối cảnh và kết quả mong muốn…</string>
     <string name="save_draft">Lưu bản nháp</string>
@@ -26,6 +27,11 @@
     <string name="backend_not_ready_body">AgentDock hiện chỉ lưu bản nháp trên thiết bị. Điều phối Agent, phê duyệt, nhật ký thực thi và kết quả sẽ hoạt động sau khi backend được triển khai.</string>
     <string name="workspace_sections">Không có hoạt động đang chạy</string>
     <string name="workspace_sections_body">Chưa có tác vụ nào được gửi lên máy chủ.</string>
+    <string name="workspace_autosave">Tự lưu trên thiết bị</string>
+    <string name="workspace_backend_title">Chưa thể chạy tác vụ</string>
+    <string name="workspace_backend_body">Backend điều phối chưa được triển khai. Yêu cầu này chưa được gửi lên máy chủ và chưa có Agent nào thực thi.</string>
+    <string name="workspace_editor_title">Nội dung yêu cầu</string>
+    <string name="workspace_editor_description">Bạn có thể tiếp tục chỉnh sửa bản nháp. Các thay đổi được lưu cục bộ tự động.</string>
     <string name="tabs_title">Các tab công việc</string>
     <string name="tabs_count">%1$d tab đang mở</string>
     <string name="new_tab">Tab mới</string>
