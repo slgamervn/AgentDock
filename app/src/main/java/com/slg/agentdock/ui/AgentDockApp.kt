@@ -125,7 +125,7 @@ fun AgentDockApp(viewModel: AgentDockViewModel) {
                     .weight(1f)
                     .fillMaxWidth(),
                 enterTransition = { androidx.compose.animation.EnterTransition.None },
-                exitTransition = { androidx.compose.animation.EnterTransition.None },
+                exitTransition = { androidx.compose.animation.ExitTransition.None },
                 popEnterTransition = { androidx.compose.animation.EnterTransition.None },
                 popExitTransition = { androidx.compose.animation.ExitTransition.None },
             ) {
