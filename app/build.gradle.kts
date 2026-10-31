@@ -19,7 +19,7 @@ val appVersionName = providers.gradleProperty("agentdockVersionName").orNull ?: 
 
 android {
     namespace = "com.slg.agentdock"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.slg.agentdock"
