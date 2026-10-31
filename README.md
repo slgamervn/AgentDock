@@ -28,7 +28,7 @@
 
 Android CI chạy:
 - `lintDebug`
-- `testDebugUnitTest`
+- `testDebugUnitTest` (kiểm tra trạng thái ViewModel, vòng đời tab, debounce và lưu địa chỉ máy chủ)
 - `assembleDebug`
 - `connectedDebugAndroidTest` trên Android 36 Emulator để kiểm tra navigation và luồng lưu bản nháp.
 

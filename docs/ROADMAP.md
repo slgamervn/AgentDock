@@ -10,6 +10,7 @@
 - [x] Split the app shell, reusable components and four screen files.
 - [x] Clarify local draft and backend-not-ready states in Workspace.
 - [x] Add Compose navigation and draft-to-workspace UI tests.
+- [ ] Add deterministic ViewModel tests for workspace restoration, tab lifecycle, debounced persistence and server address validation.
 - [x] CI debug build, lint and unit test workflow.
 - [x] Pin Ubuntu runner image to 24.04 during GitHub's ubuntu-latest migration.
 - [x] Verify connected UI tests on the Android 36 emulator (navigation and draft flow).
