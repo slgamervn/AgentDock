@@ -64,6 +64,16 @@ jobs:
           keytool -list -keystore "$KEYSTORE_PATH" \
             -storepass "$AGENTDOCK_KEYSTORE_PASSWORD" \
             -alias "$AGENTDOCK_KEY_ALIAS" >/dev/null
+          CSR_PATH="$RUNNER_TEMP/agentdock-signing-check.csr"
+          if ! keytool -certreq -alias "$AGENTDOCK_KEY_ALIAS" \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$AGENTDOCK_KEYSTORE_PASSWORD" \
+            -keypass "$AGENTDOCK_KEY_PASSWORD" \
+            -file "$CSR_PATH" >/dev/null 2>&1; then
+            echo "::error::The keystore and alias were found, but AGENTDOCK_KEY_PASSWORD could not unlock the private key. Check this GitHub Actions secret without sharing its value."
+            exit 1
+          fi
+          rm -f "$CSR_PATH"
           echo "AGENTDOCK_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
 
       - name: Build signed release APK
@@ -103,4 +113,4 @@ jobs:
       - name: Remove signing key
         if: always()
         shell: bash
-        run: rm -f "$RUNNER_TEMP/agentdock-upload.jks"
+        run: rm -f "$RUNNER_TEMP/agentdock-upload.jks" "$RUNNER_TEMP/agentdock-signing-check.csr"

@@ -16,7 +16,8 @@
 - [x] Verify connected UI tests on the Android 36 emulator (navigation and draft flow).
 - [x] Add the official Gradle 9.6.1 Wrapper scripts/JAR and pin the distribution SHA-256 checksum.
 - [x] Use the verified Gradle Wrapper for both Android CI and the signed-release workflow.
-- [ ] Verify the uploaded JKS alias, certificate and passwords without exposing them.
+- [x] Add a preflight check that verifies the selected alias can unlock its private key without exposing secrets.
+- [ ] Verify the actual uploaded JKS alias, certificate and passwords with a signed release run.
 
 ## Stage 2 — Backend foundation
 

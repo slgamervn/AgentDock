@@ -45,9 +45,9 @@ Workflow `Signed Android APK` chỉ chạy thủ công. Tạo bốn GitHub Actio
 | `AGENTDOCK_KEYSTORE_BASE64` | Nội dung file JKS đã mã hóa Base64 |
 | `AGENTDOCK_KEYSTORE_PASSWORD` | Mật khẩu kho khóa |
 | `AGENTDOCK_KEY_ALIAS` | Alias của entry ký |
-| `AGENTDOCK_KEY_PASSWORD` | Mật khẩu private key |
+| `AGENTDOCK_KEY_PASSWORD` | Mật khẩu của private key thuộc alias đã chọn; có thể khác mật khẩu JKS |
 
-Workflow giải mã JKS vào thư mục tạm của runner, đặt quyền file hạn chế, build release và chạy `apksigner verify`. File `.jks` bị loại khỏi Git bằng `.gitignore`.
+Workflow giải mã JKS vào thư mục tạm của runner, đặt quyền file hạn chế, kiểm tra alias và thử mở private key bằng `keytool -certreq` trước khi build release; sau đó chạy `apksigner verify`. Nếu kiểm tra private key thất bại, workflow chỉ báo tên secret cần kiểm tra, không in giá trị. File `.jks` bị loại khỏi Git bằng `.gitignore`.
 
 Không đổi `applicationId` hoặc thay khóa ký giữa các bản phát hành. Workflow tự dùng `github.run_number` làm `versionCode` tăng dần; bạn chỉ nhập `versionName`. Chưa phát hành bản cài đặt production cho tới khi xác minh được alias/mật khẩu JKS trong Actions và kiểm tra cập nhật đè trên thiết bị.
 
