@@ -15,6 +15,12 @@ class WorkspaceTabTest {
     }
 
     @Test
+    fun defaultWorkspaceHasNoClosedTabs() {
+        val snapshot = defaultWorkspaceSnapshot()
+        assertTrue(snapshot.closedTabs.isEmpty())
+    }
+
+    @Test
     fun tabIdsAreUniqueWhenCreatedFromDefaultFactory() {
         val first = defaultWorkspaceSnapshot()
         val second = defaultWorkspaceSnapshot()

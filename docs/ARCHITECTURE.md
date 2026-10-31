@@ -7,9 +7,11 @@ The Android application is a control plane, not the execution host. It owns user
 ## Android foundation
 
 - Compose UI renders immutable state and sends intent-like callbacks to the ViewModel.
-- `AgentDockViewModel` owns tab selection and debounced local persistence.
-- `WorkspaceStore` persists small local workspace state in DataStore. It is not the authoritative task database.
-- The current `Workspace` page clearly distinguishes an on-device draft from a server-executed task.
+- \`AgentDockViewModel\` owns screen state and debounced persistence, but does not know Android application context or storage implementation.
+- \`WorkspaceRepository\` is the data boundary used by the ViewModel.
+- \`DefaultWorkspaceRepository\` currently wraps \`WorkspaceStore\`, the DataStore-backed local data source.
+- The local store persists tabs, active selection, drafts, recently closed tabs and the server address. It is not the authoritative task database.
+- The current \`Workspace\` page clearly distinguishes an on-device draft from a server-executed task.
 - No provider API key, GitHub token, MCP credential or signing key is embedded in the application.
 
 ## Backend direction (not implemented yet)
@@ -23,9 +25,9 @@ The Android application is a control plane, not the execution host. It owns user
 
 ## Task lifecycle target
 
-`QUEUED → PLANNING → RUNNING → WAITING_APPROVAL → RUNNING → VERIFYING → SUCCEEDED`
+\`QUEUED → PLANNING → RUNNING → WAITING_APPROVAL → RUNNING → VERIFYING → SUCCEEDED\`
 
-Additional terminal/recovery states include `FAILED`, `CANCELLED`, `PAUSED`, `RETRYING`, `RECOVERING` and `EXPIRED`. A task is not successful merely because an Agent stopped; the server must evaluate its Definition of Done and attach verification evidence.
+Additional terminal/recovery states include \`FAILED\`, \`CANCELLED\`, \`PAUSED\`, \`RETRYING\`, \`RECOVERING\` and \`EXPIRED\`. A task is not successful merely because an Agent stopped; the server must evaluate its Definition of Done and attach verification evidence.
 
 ## Security model
 
@@ -38,4 +40,4 @@ Additional terminal/recovery states include `FAILED`, `CANCELLED`, `PAUSED`, `RE
 
 ## API direction
 
-REST handles task creation, pause/resume/cancel and approvals. SSE carries ordered task events with event IDs, replay via `Last-Event-ID`, heartbeat, reconnect and client-side deduplication. WebSocket is deferred until there is a concrete bidirectional streaming requirement.
+REST handles task creation, pause/resume/cancel and approvals. SSE carries ordered task events with event IDs, replay via \`Last-Event-ID\`, heartbeat, reconnect and client-side deduplication. WebSocket is deferred until there is a concrete bidirectional streaming requirement.

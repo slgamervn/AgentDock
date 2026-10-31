@@ -8,12 +8,14 @@ data class WorkspaceTab(
     val draft: String = "",
     val isPinned: Boolean = false,
     val updatedAt: Long = System.currentTimeMillis(),
+    val isTitleCustom: Boolean = false,
 )
 
 data class WorkspaceSnapshot(
     val tabs: List<WorkspaceTab>,
     val activeTabId: String,
     val serverUrl: String = "",
+    val closedTabs: List<WorkspaceTab> = emptyList(),
 )
 
 fun defaultWorkspaceSnapshot(): WorkspaceSnapshot {

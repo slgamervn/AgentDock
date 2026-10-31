@@ -11,13 +11,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-ci-${{ github.ref }}
+  group: android-ci-\${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
     name: Build and unit test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -45,7 +45,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
         with:
-          name: agentdock-debug-${{ github.run_number }}
+          name: agentdock-debug-\${{ github.run_number }}
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14

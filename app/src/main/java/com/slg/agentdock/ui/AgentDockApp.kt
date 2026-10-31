@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,10 +28,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -64,7 +68,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -80,7 +83,7 @@ private const val ROUTE_WORKSPACE = "workspace"
 private const val ROUTE_SETTINGS = "settings"
 
 @Composable
-fun AgentDockApp(viewModel: AgentDockViewModel = viewModel()) {
+fun AgentDockApp(viewModel: AgentDockViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val navController = rememberNavController()
@@ -178,6 +181,7 @@ fun AgentDockApp(viewModel: AgentDockViewModel = viewModel()) {
                 composable(ROUTE_TABS) {
                     TabsScreen(
                         tabs = state.tabs,
+                        closedTabs = state.closedTabs,
                         activeTabId = activeTab.id,
                         onOpen = { tabId ->
                             viewModel.selectTab(tabId)
@@ -189,6 +193,8 @@ fun AgentDockApp(viewModel: AgentDockViewModel = viewModel()) {
                         },
                         onClose = viewModel::closeTab,
                         onTogglePinned = viewModel::togglePinned,
+                        onRename = viewModel::renameTab,
+                        onRestoreLastClosed = viewModel::restoreLastClosedTab,
                     )
                 }
                 composable(ROUTE_WORKSPACE) {
@@ -257,7 +263,7 @@ private fun WorkspaceTabStrip(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(58.dp)
             .padding(start = 12.dp, end = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -283,7 +289,7 @@ private fun WorkspaceTabStrip(
                 ) {
                     Text(
                         text = tabLabel,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                        modifier = Modifier.heightIn(min = 48.dp).padding(horizontal = 12.dp, vertical = 9.dp),
                         color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.labelMedium,
                         maxLines = 1,
@@ -291,7 +297,7 @@ private fun WorkspaceTabStrip(
                 }
             }
         }
-        IconButton(onClick = onAdd, modifier = Modifier.size(44.dp)) {
+        IconButton(onClick = onAdd, modifier = Modifier.size(48.dp)) {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_tab))
         }
         IconButton(
@@ -492,16 +498,21 @@ private fun WorkspaceScreen(
 @Composable
 private fun TabsScreen(
     tabs: List<WorkspaceTab>,
+    closedTabs: List<WorkspaceTab>,
     activeTabId: String,
     onOpen: (String) -> Unit,
     onAdd: () -> Unit,
     onClose: (String) -> Unit,
     onTogglePinned: (String) -> Unit,
+    onRename: (String, String) -> Unit,
+    onRestoreLastClosed: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    val filteredTabs = tabs.filter { tab ->
-        query.isBlank() || tab.title.contains(query, ignoreCase = true) || tab.draft.contains(query, ignoreCase = true)
-    }
+    val filteredTabs = tabs
+        .filter { tab ->
+            query.isBlank() || tab.title.contains(query, ignoreCase = true) || tab.draft.contains(query, ignoreCase = true)
+        }
+        .sortedWith(compareByDescending<WorkspaceTab> { it.isPinned }.thenByDescending { it.updatedAt })
 
     Column(
         modifier = Modifier
@@ -522,10 +533,20 @@ private fun TabsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TextButton(onClick = onAdd) {
-                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(5.dp))
-                Text(stringResource(R.string.new_tab))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = onRestoreLastClosed,
+                    enabled = closedTabs.isNotEmpty(),
+                ) {
+                    Icon(Icons.Filled.History, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.restore_closed_tab))
+                }
+                TextButton(onClick = onAdd) {
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.new_tab))
+                }
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -556,6 +577,7 @@ private fun TabsScreen(
                         onOpen = { onOpen(tab.id) },
                         onClose = { onClose(tab.id) },
                         onTogglePinned = { onTogglePinned(tab.id) },
+                        onRename = { title -> onRename(tab.id, title) },
                     )
                 }
             }
@@ -570,10 +592,13 @@ private fun TabListItem(
     onOpen: () -> Unit,
     onClose: () -> Unit,
     onTogglePinned: () -> Unit,
+    onRename: (String) -> Unit,
 ) {
     val tabTitle = if (tab.title.isBlank()) stringResource(R.string.new_task) else tab.title
     val draftPreview = tab.draft.lineSequence().firstOrNull().orEmpty()
     val tabSubtitle = if (draftPreview.isBlank()) stringResource(R.string.empty_draft) else draftPreview
+    var showRenameDialog by rememberSaveable(tab.id) { mutableStateOf(false) }
+    var editableTitle by rememberSaveable(tab.id) { mutableStateOf(tab.title) }
 
     Surface(
         onClick = onOpen,
@@ -584,6 +609,7 @@ private fun TabListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 64.dp)
                 .padding(start = 14.dp, end = 4.dp, top = 7.dp, bottom = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -601,6 +627,9 @@ private fun TabListItem(
                     maxLines = 1,
                 )
             }
+            IconButton(onClick = { editableTitle = tab.title; showRenameDialog = true }) {
+                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.rename_tab))
+            }
             IconButton(onClick = onTogglePinned) {
                 Icon(
                     imageVector = Icons.Filled.PushPin,
@@ -616,6 +645,38 @@ private fun TabListItem(
                 )
             }
         }
+    }
+
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text(stringResource(R.string.rename_tab)) },
+            text = {
+                OutlinedTextField(
+                    value = editableTitle,
+                    onValueChange = { editableTitle = it.take(48) },
+                    label = { Text(stringResource(R.string.rename_tab_title)) },
+                    placeholder = { Text(stringResource(R.string.rename_tab_hint)) },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRename(editableTitle)
+                        showRenameDialog = false
+                    },
+                    enabled = editableTitle.isNotBlank(),
+                ) {
+                    Text(stringResource(R.string.save_settings))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 }
 

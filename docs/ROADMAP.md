@@ -4,12 +4,15 @@
 
 - [x] Native Compose project and design tokens.
 - [x] Home / Tabs / Settings navigation.
-- [x] Independent task tabs, pin/close/select and local draft persistence.
+- [x] Independent task tabs, rename, pin/close/restore and local draft persistence.
+- [x] Repository boundary between the ViewModel and DataStore.
 - [x] CI debug build and unit test workflow.
 - [x] Isolated manual release workflow using repository secrets.
-- [ ] Verify the first Actions run and resolve any build findings.
+- [x] Verify Android CI: lint, unit tests, debug APK build and artifact upload passed.
+- [x] Pin Ubuntu runner image to 24.04 during GitHub's ubuntu-latest migration.
 - [ ] Generate and commit the official Gradle Wrapper.
 - [ ] Verify the uploaded JKS alias, certificate and passwords without exposing them.
+- [ ] Split the current Compose screen source into focused screen/component files and add UI navigation tests.
 
 ## Stage 2 — Backend foundation
 

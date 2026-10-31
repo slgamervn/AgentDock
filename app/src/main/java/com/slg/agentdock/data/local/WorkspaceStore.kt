@@ -33,12 +33,14 @@ class WorkspaceStore(context: Context) {
                 tabs = safeTabs,
                 activeTabId = safeTabs.firstOrNull { it.id == savedActiveId }?.id ?: safeTabs.first().id,
                 serverUrl = preferences[SERVER_URL_KEY].orEmpty(),
+                closedTabs = decodeTabs(preferences[CLOSED_TABS_KEY]).take(MAX_CLOSED_TABS),
             )
         }
 
     suspend fun save(snapshot: WorkspaceSnapshot) {
         store.edit { preferences ->
             preferences[TABS_KEY] = encodeTabs(snapshot.tabs)
+            preferences[CLOSED_TABS_KEY] = encodeTabs(snapshot.closedTabs.take(MAX_CLOSED_TABS))
             preferences[ACTIVE_TAB_KEY] = snapshot.activeTabId
             preferences[SERVER_URL_KEY] = snapshot.serverUrl
         }
@@ -52,7 +54,8 @@ class WorkspaceStore(context: Context) {
                     .put("title", tab.title)
                     .put("draft", tab.draft)
                     .put("pinned", tab.isPinned)
-                    .put("updatedAt", tab.updatedAt),
+                    .put("updatedAt", tab.updatedAt)
+                    .put("customTitle", tab.isTitleCustom),
             )
         }
     }.toString()
@@ -72,6 +75,7 @@ class WorkspaceStore(context: Context) {
                             draft = item.optString("draft"),
                             isPinned = item.optBoolean("pinned"),
                             updatedAt = item.optLong("updatedAt", System.currentTimeMillis()),
+                            isTitleCustom = item.optBoolean("customTitle"),
                         ),
                     )
                 }
@@ -80,7 +84,9 @@ class WorkspaceStore(context: Context) {
     }
 
     private companion object {
+        const val MAX_CLOSED_TABS = 10
         val TABS_KEY = stringPreferencesKey("workspace_tabs")
+        val CLOSED_TABS_KEY = stringPreferencesKey("closed_workspace_tabs")
         val ACTIVE_TAB_KEY = stringPreferencesKey("active_tab_id")
         val SERVER_URL_KEY = stringPreferencesKey("server_url")
     }
