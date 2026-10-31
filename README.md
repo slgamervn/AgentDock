@@ -18,7 +18,7 @@
 - Clean Architecture direction, MVVM/UDF.
 - DataStore Preferences cho tab, bản nháp và địa chỉ máy chủ cục bộ ở giai đoạn nền tảng.
 - `applicationId`: `com.slg.agentdock` (giữ ổn định để hỗ trợ cập nhật đè).
-- `minSdk`: 23; `compileSdk`: 37; `targetSdk`: 36.
+- `minSdk`: 23; `compileSdk`: 36; `targetSdk`: 36.
 - Android Gradle Plugin 9.5.0, Gradle 9.6.1, JDK 17.
 
 Các phiên bản công cụ và thư viện được pin cụ thể; không dùng dynamic version (`+`).
