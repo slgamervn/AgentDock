@@ -40,10 +40,10 @@ jobs:
       - name: Validate and prepare signing key
         shell: bash
         env:
-          AGENTDOCK_KEYSTORE_BASE64: ${ secrets.AGENTDOCK_KEYSTORE_BASE64 }}
-          AGENTDOCK_KEYSTORE_PASSWORD: ${ secrets.AGENTDOCK_KEYSTORE_PASSWORD }}
-          AGENTDOCK_KEY_ALIAS: ${ secrets.AGENTDOCK_KEY_ALIAS }}
-          AGENTDOCK_KEY_PASSWORD: ${ secrets.AGENTDOCK_KEY_PASSWORD }}
+          AGENTDOCK_KEYSTORE_BASE64: ${{ secrets.AGENTDOCK_KEYSTORE_BASE64 }}
+          AGENTDOCK_KEYSTORE_PASSWORD: ${{ secrets.AGENTDOCK_KEYSTORE_PASSWORD }}
+          AGENTDOCK_KEY_ALIAS: ${{ secrets.AGENTDOCK_KEY_ALIAS }}
+          AGENTDOCK_KEY_PASSWORD: ${{ secrets.AGENTDOCK_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           missing=()
@@ -66,11 +66,11 @@ jobs:
 
       - name: Build signed release APK
         env:
-          AGENTDOCK_KEYSTORE_PASSWORD: ${ secrets.AGENTDOCK_KEYSTORE_PASSWORD }}
-          AGENTDOCK_KEY_ALIAS: ${ secrets.AGENTDOCK_KEY_ALIAS }}
-          AGENTDOCK_KEY_PASSWORD: ${ secrets.AGENTDOCK_KEY_PASSWORD }}
-          VERSION_CODE: ${ github.run_number }}
-          VERSION_NAME: ${ inputs.version_name }}
+          AGENTDOCK_KEYSTORE_PASSWORD: ${{ secrets.AGENTDOCK_KEYSTORE_PASSWORD }}
+          AGENTDOCK_KEY_ALIAS: ${{ secrets.AGENTDOCK_KEY_ALIAS }}
+          AGENTDOCK_KEY_PASSWORD: ${{ secrets.AGENTDOCK_KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ inputs.version_name }}
         shell: bash
         run: |
           set -euo pipefail
@@ -93,7 +93,7 @@ jobs:
       - name: Upload signed APK
         uses: actions/upload-artifact@v7
         with:
-          name: agentdock-release-${ inputs.version_name }}-${ github.run_number }}
+          name: agentdock-release-${{ inputs.version_name }}-${{ github.run_number }}
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 30

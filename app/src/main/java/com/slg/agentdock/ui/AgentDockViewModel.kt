@@ -200,7 +200,7 @@ class AgentDockViewModel(
             if (modelClass.isAssignableFrom(AgentDockViewModel::class.java)) {
                 return AgentDockViewModel(repository) as T
             }
-            throw IllegalArgumentException("Unknown ViewModel class: \${modelClass.name}")
+            throw IllegalArgumentException("Unknown ViewModel class: " + modelClass.name)
         }
     }
 
