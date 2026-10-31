@@ -37,7 +37,7 @@ jobs:
         uses: android-actions/setup-android@v4
 
       - name: Install Android SDK packages
-        run: sdkmanager --install "platforms;android-37" "build-tools;36.0.0"
+        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
 
       - name: Run unit tests and build debug APK
         run: gradle --no-daemon --stacktrace lintDebug testDebugUnitTest assembleDebug
