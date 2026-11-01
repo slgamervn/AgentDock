@@ -14,10 +14,16 @@ The Android application is a control plane, not the execution host. It owns user
 - The current \`Workspace\` page clearly distinguishes an on-device draft from a server-executed task.
 - No provider API key, GitHub token, MCP credential or signing key is embedded in the application.
 
-## Backend direction (not implemented yet)
+## Backend foundation
+
+- A minimal FastAPI process now exposes GET /api/v1/health/live; this is a process liveness check only, not a database or worker readiness guarantee.
+- Runtime settings are loaded from AGENTDOCK_ environment variables through Pydantic Settings. Secrets must not be committed or returned by health routes.
+- The container runs as a non-root user and excludes local environment files.
+
+## Backend direction (planned; not implemented yet)
 
 - FastAPI for versioned REST APIs and SSE event delivery.
-- PostgreSQL as the authoritative store for task, approval, policy and audit records.
+- PostgreSQL as the authoritative store for task, approval, policy and audit records; no database connection or schema is implemented yet.
 - LangGraph owns the explicit workflow graph, checkpoints and recovery transitions.
 - OpenHands runs delegated coding/research work inside an isolated workspace. It does not own the task's global lifecycle.
 - Independent worker processes use database-backed leases/heartbeats and idempotent transitions; a queue is a delivery mechanism, not the source of truth.

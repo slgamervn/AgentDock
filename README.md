@@ -3,7 +3,7 @@
 
 **Autonomous Agent Control Center** — ứng dụng Android để giao việc, theo dõi tiến trình và phê duyệt hành động của các AI Agent.
 
-> Trạng thái hiện tại: Android foundation `0.1.0`. Ứng dụng có Home / Tabs / Workspace / Settings, workspace độc lập, đổi tên tab, ghim tab, khôi phục tối đa 10 tab vừa đóng và lưu bản nháp cục bộ. Backend điều phối Agent chưa được triển khai; ứng dụng chưa gửi hoặc thực thi tác vụ từ xa.
+> Trạng thái hiện tại: Android foundation 0.1.0 và backend bootstrap 0.1.0. Backend hiện chỉ có liveness endpoint; chưa có đăng nhập, database, tạo tác vụ hay thực thi Agent. Android vẫn lưu bản nháp cục bộ và chưa gửi tác vụ từ xa.
 
 ## Nguyên tắc sản phẩm
 
@@ -35,6 +35,14 @@ Android CI chạy:
 - `connectedDebugAndroidTest` trên Android 36 Emulator để kiểm tra navigation và luồng lưu bản nháp.
 
 Runner CI được cố định ở Ubuntu 24.04. APK debug được lưu thành Actions artifact trong 14 ngày.
+
+## Backend foundation
+
+- Python 3.14, FastAPI và Pydantic Settings; dependency runtime được pin trong backend/requirements.txt.
+- API version đầu tiên nằm dưới /api/v1; hiện có GET /api/v1/health/live để xác nhận process đang hoạt động.
+- Docker image chạy bằng user không đặc quyền; không chứa .env, credentials hoặc signing material.
+- Backend CI cài dependencies, compile Python, chạy pytest và build Docker image.
+- Chưa có database readiness probe vì PostgreSQL chưa được kết nối; không diễn giải liveness thành trạng thái sẵn sàng xử lý tác vụ.
 
 ## Ký APK release
 
