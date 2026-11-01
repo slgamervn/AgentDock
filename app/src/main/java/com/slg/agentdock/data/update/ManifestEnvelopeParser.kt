@@ -6,7 +6,8 @@ internal object ManifestEnvelopeParser {
 
     fun parse(json: String): SignedManifestEnvelope {
         val root = StrictJsonParser.parse(json, MAX_ENVELOPE_CHARS)
-        val objectValue = root as? JsonValue.Object ?: error("Manifest envelope must be a JSON object")
+        val objectValue = root as? JsonValue.Object
+            ?: throw IllegalArgumentException("Manifest envelope must be a JSON object")
         require(objectValue.fields.keys == REQUIRED_FIELDS) { "Manifest envelope fields are invalid" }
 
         return SignedManifestEnvelope(
