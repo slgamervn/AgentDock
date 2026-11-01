@@ -8,6 +8,7 @@ on:
       - ".github/workflows/backend-ci.yml"
       - "README.md"
       - "docs/ARCHITECTURE.md"
+      - "docs/ROADMAP.md"
   pull_request:
     branches: [main]
     paths:
@@ -15,6 +16,7 @@ on:
       - ".github/workflows/backend-ci.yml"
       - "README.md"
       - "docs/ARCHITECTURE.md"
+      - "docs/ROADMAP.md"
   workflow_dispatch:
 
 permissions:
@@ -28,7 +30,26 @@ jobs:
   test:
     name: Test and build backend
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: agentdock
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-postgres-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d agentdock"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      AGENTDOCK_DATABASE_URL: postgresql+asyncpg://agentdock_runtime:ci-runtime-password@127.0.0.1:5432/agentdock
+      AGENTDOCK_MIGRATION_DATABASE_URL: postgresql+asyncpg://agentdock_migrator:ci-migrator-password@127.0.0.1:5432/agentdock
+      AGENTDOCK_TEST_ADMIN_DATABASE_URL: postgresql+asyncpg://postgres:ci-postgres-password@127.0.0.1:5432/agentdock
+      AGENTDOCK_TEST_DATABASE_URL: postgresql+asyncpg://agentdock_runtime:ci-runtime-password@127.0.0.1:5432/agentdock
     defaults:
       run:
         working-directory: backend
@@ -47,7 +68,40 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
       - name: Compile Python sources
-        run: python -m compileall -q app tests
+        run: python -m compileall -q app migrations tests
+
+      - name: Provision separated database roles
+        env:
+          PGPASSWORD: ci-postgres-password
+        run: |
+          psql -h 127.0.0.1 -U postgres -d agentdock -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE agentdock_migrator LOGIN PASSWORD 'ci-migrator-password'
+            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+          CREATE ROLE agentdock_runtime LOGIN PASSWORD 'ci-runtime-password'
+            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+          ALTER SCHEMA public OWNER TO agentdock_migrator;
+          GRANT CONNECT ON DATABASE agentdock TO agentdock_migrator, agentdock_runtime;
+          GRANT USAGE ON SCHEMA public TO agentdock_runtime;
+          SQL
+
+      - name: Apply database migrations
+        run: python -m alembic upgrade head
+
+      - name: Grant least-privilege runtime table access
+        env:
+          PGPASSWORD: ci-migrator-password
+        run: |
+          psql -h 127.0.0.1 -U agentdock_migrator -d agentdock -v ON_ERROR_STOP=1 <<'SQL'
+          GRANT SELECT ON TABLE tenants, users TO agentdock_runtime;
+          GRANT SELECT, INSERT, UPDATE, DELETE
+            ON TABLE tenant_memberships, tasks, task_events, idempotency_records
+            TO agentdock_runtime;
+          SQL
+
+      - name: Verify migration head and ORM schema
+        run: |
+          python -m alembic current
+          python -m alembic check
 
       - name: Run backend tests
         run: python -m pytest -q

@@ -3,8 +3,8 @@ package com.slg.agentdock.ui.components
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,7 +42,7 @@ fun MainNavigationBar(
             modifier = Modifier.testTag("navigation.tabs"),
             selected = currentRoute == ROUTE_TABS,
             onClick = { onNavigate(ROUTE_TABS) },
-            icon = { Icon(Icons.Filled.List, contentDescription = null, modifier = Modifier.size(22.dp)) },
+            icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, modifier = Modifier.size(22.dp)) },
             label = { Text(stringResource(R.string.tabs_nav)) },
         )
         NavigationBarItem(

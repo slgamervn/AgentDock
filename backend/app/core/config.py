@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,8 +13,9 @@ class Settings(BaseSettings):
     )
 
     service_name: str = "AgentDock API"
-    app_version: str = "0.1.0"
+    app_version: str = "0.2.0"
     environment: Literal["development", "test", "staging", "production"] = "development"
+    database_url: SecretStr | None = None
 
 
 @lru_cache(maxsize=1)

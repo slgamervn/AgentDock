@@ -1,0 +1,210 @@
+import asyncio
+import os
+from uuid import uuid4
+
+import pytest
+from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
+from sqlalchemy.ext.asyncio import create_async_engine
+
+ADMIN_DATABASE_URL = os.getenv("AGENTDOCK_TEST_ADMIN_DATABASE_URL")
+RUNTIME_DATABASE_URL = os.getenv("AGENTDOCK_TEST_DATABASE_URL")
+POSTGRES_TESTS_ENABLED = bool(ADMIN_DATABASE_URL and RUNTIME_DATABASE_URL)
+
+pytestmark = pytest.mark.skipif(
+    not POSTGRES_TESTS_ENABLED,
+    reason="PostgreSQL integration URLs are not configured; CI always configures them.",
+)
+
+
+def test_runtime_role_is_restricted_and_tenant_tables_force_rls() -> None:
+    async def check_database() -> None:
+        admin_engine = create_async_engine(ADMIN_DATABASE_URL, pool_pre_ping=True)
+        try:
+            async with admin_engine.connect() as connection:
+                role = (
+                    await connection.execute(
+                        text(
+                            "SELECT rolsuper, rolbypassrls FROM pg_roles "
+                            "WHERE rolname = 'agentdock_runtime'"
+                        )
+                    )
+                ).one()
+                assert role.rolsuper is False
+                assert role.rolbypassrls is False
+
+                rows = (
+                    await connection.execute(
+                        text(
+                            "SELECT relname, relrowsecurity, relforcerowsecurity, "
+                            "pg_get_userbyid(relowner) AS owner "
+                            "FROM pg_class "
+                            "WHERE relnamespace = 'public'::regnamespace "
+                            "AND relname IN "
+                            "('tenant_memberships', 'tasks', 'task_events', "
+                            "'idempotency_records')"
+                        )
+                    )
+                ).all()
+                assert len(rows) == 4
+                assert all(row.relrowsecurity and row.relforcerowsecurity for row in rows)
+                assert all(row.owner == "agentdock_migrator" for row in rows)
+
+                grants = (
+                    await connection.execute(
+                        text(
+                            "SELECT "
+                            "has_table_privilege('agentdock_runtime', 'tenants', 'INSERT') AS tenant_insert, "
+                            "has_table_privilege('agentdock_runtime', 'users', 'INSERT') AS user_insert, "
+                            "has_table_privilege('agentdock_runtime', 'tasks', 'INSERT') AS task_insert, "
+                            "has_table_privilege('agentdock_runtime', 'alembic_version', 'SELECT') AS migration_history_read, "
+                            "has_schema_privilege('agentdock_runtime', 'public', 'CREATE') AS schema_create"
+                        )
+                    )
+                ).one()
+                assert grants.tenant_insert is False
+                assert grants.user_insert is False
+                assert grants.task_insert is True
+                assert grants.migration_history_read is False
+                assert grants.schema_create is False
+        finally:
+            await admin_engine.dispose()
+
+    asyncio.run(check_database())
+
+
+def test_tenant_context_is_transaction_local_and_blocks_cross_tenant_writes() -> None:
+    async def check_isolation() -> None:
+        admin_engine = create_async_engine(ADMIN_DATABASE_URL, pool_pre_ping=True)
+        runtime_engine = create_async_engine(RUNTIME_DATABASE_URL, pool_pre_ping=True)
+
+        tenant_a, tenant_b = uuid4(), uuid4()
+        user_a_id, user_b_id = uuid4(), uuid4()
+        task_a, task_b = uuid4(), uuid4()
+        suffix = uuid4().hex
+        try:
+            async with admin_engine.begin() as connection:
+                await connection.execute(
+                    text(
+                        "INSERT INTO tenants (id, slug, name) VALUES "
+                        "(:tenant_a, :slug_a, 'Tenant A'), "
+                        "(:tenant_b, :slug_b, 'Tenant B')"
+                    ),
+                    {
+                        "tenant_a": tenant_a,
+                        "slug_a": f"test-a-{suffix}",
+                        "tenant_b": tenant_b,
+                        "slug_b": f"test-b-{suffix}",
+                    },
+                )
+                await connection.execute(
+                    text(
+                        "INSERT INTO users (id, email, display_name) "
+                        "VALUES (:user_a, :email_a, 'Tenant A user'), "
+                        "(:user_b, :email_b, 'Tenant B user')"
+                    ),
+                    {
+                        "user_a": user_a_id,
+                        "email_a": f"rls-a-{suffix}@example.test",
+                        "user_b": user_b_id,
+                        "email_b": f"rls-b-{suffix}@example.test",
+                    },
+                )
+                await connection.execute(
+                    text(
+                        "INSERT INTO tenant_memberships (id, tenant_id, user_id, role) "
+                        "VALUES (:membership_a, :tenant_a, :user_a, 'owner'), "
+                        "(:membership_b, :tenant_b, :user_b, 'owner')"
+                    ),
+                    {
+                        "membership_a": uuid4(),
+                        "membership_b": uuid4(),
+                        "tenant_a": tenant_a,
+                        "tenant_b": tenant_b,
+                        "user_a": user_a_id,
+                        "user_b": user_b_id,
+                    },
+                )
+                await connection.execute(
+                    text(
+                        "INSERT INTO tasks "
+                        "(id, tenant_id, created_by_user_id, title, prompt) "
+                        "VALUES "
+                        "(:task_a, :tenant_a, :user_a, 'Task A', 'test prompt'), "
+                        "(:task_b, :tenant_b, :user_b, 'Task B', 'test prompt')"
+                    ),
+                    {
+                        "task_a": task_a,
+                        "task_b": task_b,
+                        "tenant_a": tenant_a,
+                        "tenant_b": tenant_b,
+                        "user_a": user_a_id,
+                        "user_b": user_b_id,
+                    },
+                )
+
+                # Tenant A's member cannot be recorded as the creator in Tenant B.
+                with pytest.raises(DBAPIError):
+                    async with connection.begin_nested():
+                        await connection.execute(
+                            text(
+                                "INSERT INTO tasks "
+                                "(id, tenant_id, created_by_user_id, title, prompt) "
+                                "VALUES (:task_id, :tenant_b, :user_a, 'Invalid actor', 'blocked')"
+                            ),
+                            {
+                                "task_id": uuid4(),
+                                "tenant_b": tenant_b,
+                                "user_a": user_a_id,
+                            },
+                        )
+
+            async with runtime_engine.connect() as connection:
+                async with connection.begin():
+                    await connection.execute(
+                        text("SELECT set_config('app.current_tenant_id', :tenant_id, true)"),
+                        {"tenant_id": str(tenant_a)},
+                    )
+                    visible_tasks = (
+                        await connection.execute(
+                            text("SELECT id FROM tasks ORDER BY title")
+                        )
+                    ).scalars().all()
+                    visible_memberships = (
+                        await connection.execute(
+                            text("SELECT tenant_id FROM tenant_memberships")
+                        )
+                    ).scalars().all()
+                    assert visible_tasks == [task_a]
+                    assert visible_memberships == [tenant_a]
+
+                # SET LOCAL must not leak when the pooled connection is reused.
+                async with connection.begin():
+                    unscoped_count = (
+                        await connection.execute(text("SELECT count(*) FROM tasks"))
+                    ).scalar_one()
+                    assert unscoped_count == 0
+
+            with pytest.raises(DBAPIError):
+                async with runtime_engine.begin() as connection:
+                    await connection.execute(
+                        text("SELECT set_config('app.current_tenant_id', :tenant_id, true)"),
+                        {"tenant_id": str(tenant_a)},
+                    )
+                    await connection.execute(
+                        text(
+                            "INSERT INTO tasks "
+                            "(id, tenant_id, created_by_user_id, title, prompt) "
+                            "VALUES (:task_id, :tenant_b, :user_a, 'Cross tenant', 'blocked')"
+                        ),
+                        {
+                            "task_id": uuid4(),
+                            "tenant_b": tenant_b,
+                            "user_a": user_a_id,
+                        },
+                    )
+        finally:
+            await runtime_engine.dispose()
+            await admin_engine.dispose()
+
+    asyncio.run(check_isolation())
