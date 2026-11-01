@@ -63,4 +63,31 @@
     <string name="home_nav">Trang chủ</string>
     <string name="tabs_nav">Tab</string>
     <string name="settings_nav">Cài đặt</string>
+
+    <string name="settings_description">Điều chỉnh giao diện và cách AgentDock phản hồi trên thiết bị này.</string>
+    <string name="settings_appearance">Giao diện</string>
+    <string name="theme_title">Chế độ hiển thị</string>
+    <string name="theme_system">Theo máy</string>
+    <string name="theme_dark">Tối</string>
+    <string name="theme_light">Sáng</string>
+    <string name="accent_title">Màu nhấn</string>
+    <string name="accent_emerald">Ngọc lục bảo</string>
+    <string name="accent_blue">Xanh dương</string>
+    <string name="accent_amber">Hổ phách</string>
+    <string name="font_size_title">Cỡ chữ</string>
+    <string name="font_small">Nhỏ</string>
+    <string name="font_default">Mặc định</string>
+    <string name="font_large">Lớn</string>
+    <string name="font_size_help">Cỡ chữ này được áp dụng cùng với cỡ chữ trợ năng của Android.</string>
+    <string name="settings_experience">Phản hồi</string>
+    <string name="haptics_title">Rung nhẹ</string>
+    <string name="haptics_description">Phản hồi xúc giác khi tạo hoặc lưu thao tác.</string>
+    <string name="sound_title">Âm thanh giao diện</string>
+    <string name="sound_description">Dùng âm click hệ thống cho thao tác chính. Mặc định tắt.</string>
+    <string name="settings_language">Ngôn ngữ</string>
+    <string name="language_description">AgentDock hỗ trợ Tiếng Việt và English. Trên Android 13 trở lên, bạn có thể chọn ngôn ngữ riêng cho ứng dụng trong Cài đặt hệ thống.</string>
+    <string name="language_button">Mở cài đặt ngôn ngữ</string>
+    <string name="language_older_android">Thiết bị này dùng ngôn ngữ hệ thống. Hãy đổi ngôn ngữ Android để thay đổi ngôn ngữ ứng dụng.</string>
+    <string name="settings_connections">Kết nối và bảo mật</string>
+
 </resources>
