@@ -73,7 +73,7 @@ private fun AgentDockAppContent(
 
     fun feedback() {
         if (state.preferences.hapticsEnabled) {
-            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            haptics.performHapticFeedback(HapticFeedbackType.Confirm)
         }
         if (state.preferences.soundEnabled) {
             view.playSoundEffect(SoundEffectConstants.CLICK)
