@@ -1,6 +1,6 @@
-
 package com.slg.agentdock.ui
 
+import android.view.SoundEffectConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +19,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.hapticfeedback.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -33,6 +36,7 @@ import com.slg.agentdock.ui.screens.HomeScreen
 import com.slg.agentdock.ui.screens.SettingsScreen
 import com.slg.agentdock.ui.screens.TabsScreen
 import com.slg.agentdock.ui.screens.WorkspaceScreen
+import com.slg.agentdock.ui.theme.AgentDockTheme
 import kotlinx.coroutines.flow.collect
 
 private const val ROUTE_HOME = "home"
@@ -43,13 +47,38 @@ private const val ROUTE_SETTINGS = "settings"
 @Composable
 fun AgentDockApp(viewModel: AgentDockViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    AgentDockTheme(
+        themeMode = state.preferences.themeMode,
+        accentColor = state.preferences.accentColor,
+        fontScale = state.preferences.fontScale,
+    ) {
+        AgentDockAppContent(viewModel, state)
+    }
+}
+
+@Composable
+private fun AgentDockAppContent(
+    viewModel: AgentDockViewModel,
+    state: AgentDockUiState,
+) {
     val snackbarHostState = remember { SnackbarHostState() }
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
+    val haptics = LocalHapticFeedback.current
+    val view = LocalView.current
     val draftSavedMessage = androidx.compose.ui.res.stringResource(R.string.draft_saved)
     val serverAddressSavedMessage = androidx.compose.ui.res.stringResource(R.string.server_address_saved)
     val invalidServerAddressMessage = androidx.compose.ui.res.stringResource(R.string.invalid_server_address)
+
+    fun feedback() {
+        if (state.preferences.hapticsEnabled) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+        if (state.preferences.soundEnabled) {
+            view.playSoundEffect(SoundEffectConstants.CLICK)
+        }
+    }
 
     LaunchedEffect(viewModel, draftSavedMessage, serverAddressSavedMessage, invalidServerAddressMessage) {
         viewModel.events.collect { event ->
@@ -64,9 +93,7 @@ fun AgentDockApp(viewModel: AgentDockViewModel) {
 
     if (!state.isLoaded || state.tabs.isEmpty()) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center,
         ) {
             androidx.compose.material3.Text(
@@ -92,10 +119,7 @@ fun AgentDockApp(viewModel: AgentDockViewModel) {
         contentWindowInsets = WindowInsets.systemBars,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            MainNavigationBar(
-                currentRoute = currentRoute,
-                onNavigate = ::navigateTo,
-            )
+            MainNavigationBar(currentRoute = currentRoute, onNavigate = ::navigateTo)
         },
     ) { innerPadding ->
         Column(
@@ -113,6 +137,7 @@ fun AgentDockApp(viewModel: AgentDockViewModel) {
                     navigateTo(ROUTE_WORKSPACE)
                 },
                 onAdd = {
+                    feedback()
                     viewModel.addTab()
                     navigateTo(ROUTE_WORKSPACE)
                 },
@@ -121,9 +146,7 @@ fun AgentDockApp(viewModel: AgentDockViewModel) {
             NavHost(
                 navController = navController,
                 startDestination = ROUTE_HOME,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 enterTransition = { androidx.compose.animation.EnterTransition.None },
                 exitTransition = { androidx.compose.animation.ExitTransition.None },
                 popEnterTransition = { androidx.compose.animation.EnterTransition.None },
@@ -134,6 +157,7 @@ fun AgentDockApp(viewModel: AgentDockViewModel) {
                         tab = activeTab,
                         onDraftChange = viewModel::updateDraft,
                         onSaveDraft = {
+                            feedback()
                             viewModel.saveDraft()
                             navigateTo(ROUTE_WORKSPACE)
                         },
@@ -149,6 +173,7 @@ fun AgentDockApp(viewModel: AgentDockViewModel) {
                             navigateTo(ROUTE_WORKSPACE)
                         },
                         onAdd = {
+                            feedback()
                             viewModel.addTab()
                             navigateTo(ROUTE_WORKSPACE)
                         },
@@ -162,13 +187,21 @@ fun AgentDockApp(viewModel: AgentDockViewModel) {
                     WorkspaceScreen(
                         tab = activeTab,
                         onDraftChange = viewModel::updateDraft,
-                        onSaveDraft = viewModel::saveDraft,
+                        onSaveDraft = {
+                            feedback()
+                            viewModel.saveDraft()
+                        },
                     )
                 }
                 composable(ROUTE_SETTINGS) {
                     SettingsScreen(
                         serverUrl = state.serverUrl,
-                        onSaveServerUrl = viewModel::saveServerUrl,
+                        preferences = state.preferences,
+                        onSaveServerUrl = {
+                            feedback()
+                            viewModel.saveServerUrl(it)
+                        },
+                        onPreferencesChange = viewModel::updatePreferences,
                     )
                 }
             }
