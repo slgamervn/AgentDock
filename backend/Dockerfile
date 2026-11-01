@@ -10,6 +10,8 @@ RUN pip install --no-cache-dir --disable-pip-version-check -r requirements.txt \
     && useradd --system --uid 10001 --create-home appuser
 
 COPY --chown=appuser:appuser app ./app
+COPY --chown=appuser:appuser migrations ./migrations
+COPY --chown=appuser:appuser alembic.ini ./alembic.ini
 
 USER 10001:10001
 EXPOSE 8000
