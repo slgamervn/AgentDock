@@ -11,11 +11,20 @@ data class WorkspaceTab(
     val isTitleCustom: Boolean = false,
 )
 
+data class AppPreferences(
+    val themeMode: String = "system",
+    val accentColor: String = "emerald",
+    val fontScale: Float = 1f,
+    val soundEnabled: Boolean = false,
+    val hapticsEnabled: Boolean = true,
+)
+
 data class WorkspaceSnapshot(
     val tabs: List<WorkspaceTab>,
     val activeTabId: String,
     val serverUrl: String = "",
     val closedTabs: List<WorkspaceTab> = emptyList(),
+    val preferences: AppPreferences = AppPreferences(),
 )
 
 fun defaultWorkspaceSnapshot(): WorkspaceSnapshot {
