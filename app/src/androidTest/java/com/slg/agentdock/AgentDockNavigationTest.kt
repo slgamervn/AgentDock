@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
@@ -44,8 +45,8 @@ class AgentDockNavigationTest {
         composeRule.onNodeWithTag("settings.fontSize.1.15").performClick()
         composeRule.onNodeWithTag("settings.fontSize.1.15").assertIsSelected()
 
-        composeRule.onNodeWithTag("settings.haptics").performClick()
-        composeRule.onNodeWithTag("settings.sound").performClick()
+        composeRule.onNodeWithTag("settings.haptics").performScrollTo().performClick()
+        composeRule.onNodeWithTag("settings.sound").performScrollTo().performClick()
     }
 
     @Test
