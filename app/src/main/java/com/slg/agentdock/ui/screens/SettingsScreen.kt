@@ -38,7 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.toggleable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.unit.dp
 import com.slg.agentdock.R
 import com.slg.agentdock.data.model.AppPreferences
