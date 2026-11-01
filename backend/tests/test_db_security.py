@@ -36,7 +36,8 @@ def test_runtime_role_is_restricted_and_tenant_tables_force_rls() -> None:
                 rows = (
                     await connection.execute(
                         text(
-                            "SELECT relname, relrowsecurity, relforcerowsecurity "
+                            "SELECT relname, relrowsecurity, relforcerowsecurity, "
+                            "pg_get_userbyid(relowner) AS owner "
                             "FROM pg_class "
                             "WHERE relnamespace = 'public'::regnamespace "
                             "AND relname IN "
@@ -47,6 +48,25 @@ def test_runtime_role_is_restricted_and_tenant_tables_force_rls() -> None:
                 ).all()
                 assert len(rows) == 4
                 assert all(row.relrowsecurity and row.relforcerowsecurity for row in rows)
+                assert all(row.owner == "agentdock_migrator" for row in rows)
+
+                grants = (
+                    await connection.execute(
+                        text(
+                            "SELECT "
+                            "has_table_privilege('agentdock_runtime', 'tenants', 'INSERT') AS tenant_insert, "
+                            "has_table_privilege('agentdock_runtime', 'users', 'INSERT') AS user_insert, "
+                            "has_table_privilege('agentdock_runtime', 'tasks', 'INSERT') AS task_insert, "
+                            "has_table_privilege('agentdock_runtime', 'alembic_version', 'SELECT') AS migration_history_read, "
+                            "has_schema_privilege('agentdock_runtime', 'public', 'CREATE') AS schema_create"
+                        )
+                    )
+                ).one()
+                assert grants.tenant_insert is False
+                assert grants.user_insert is False
+                assert grants.task_insert is True
+                assert grants.migration_history_read is False
+                assert grants.schema_create is False
         finally:
             await admin_engine.dispose()
 
