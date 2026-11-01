@@ -134,6 +134,22 @@ def test_tenant_context_is_transaction_local_and_blocks_cross_tenant_writes() ->
                     },
                 )
 
+                # A user who belongs to Tenant A must not create a Tenant B task.
+                with pytest.raises(DBAPIError):
+                    async with connection.begin_nested():
+                        await connection.execute(
+                            text(
+                                "INSERT INTO tasks "
+                                "(id, tenant_id, created_by_user_id, title, prompt) "
+                                "VALUES (:task_id, :tenant_b, :user_id, 'Invalid actor', 'blocked')"
+                            ),
+                            {
+                                "task_id": uuid4(),
+                                "tenant_b": tenant_b,
+                                "user_id": user_id,
+                            },
+                        )
+
             async with runtime_engine.connect() as connection:
                 async with connection.begin():
                     await connection.execute(
