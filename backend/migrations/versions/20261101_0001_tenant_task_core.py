@@ -75,7 +75,12 @@ def upgrade() -> None:
             "'RETRYING', 'RECOVERING', 'EXPIRED')",
             name="ck_tasks_status",
         ),
-        sa.ForeignKeyConstraint(["created_by_user_id"], ["users.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "created_by_user_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.user_id"],
+            name="fk_tasks_creator_membership",
+            ondelete="RESTRICT",
+        ),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("id", "tenant_id", name="uq_tasks_id_tenant"),
@@ -118,7 +123,12 @@ def upgrade() -> None:
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint("state IN ('IN_PROGRESS', 'COMPLETED')", name="ck_idempotency_state"),
-        sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "actor_user_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.user_id"],
+            name="fk_idempotency_actor_membership",
+            ondelete="RESTRICT",
+        ),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
