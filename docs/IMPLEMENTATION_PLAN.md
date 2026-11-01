@@ -244,3 +244,59 @@ The design is ready to code when:
 - Make small, reviewable commits.
 - After each code change, re-read affected files and surrounding code, run targeted tests, then full relevant CI.
 - Do not change applicationId or release signing identity as part of feature work.
+
+
+## 10. Additional implementation slices: consent, updates and performance
+
+These are product requirements, not currently implemented features. They must be added to the delivery plan without displacing the initial authenticated single-agent vertical slice.
+
+### P0-A — Legal documents and consent foundation
+
+- Finalize the actual data inventory, controller/processor roles, provider list, retention schedule, transfer map and contact identity.
+- Have Terms of Service and Privacy Policy reviewed for the applicable jurisdictions, including Vietnamese law in force at release.
+- Implement versioned legal-document screens and acceptance records.
+- Implement purpose-specific consent records for optional analytics, memory, per-conversation feedback, evaluation contribution and any future model training.
+- Keep AI-improvement contribution OFF by default; separate evaluation and training consent.
+- Add access/export/correction/deletion/withdrawal request workflow and propagation status.
+- Add age-appropriate notices and representative-consent handling where legally required.
+
+**Gate:** consent tests prove opt-out does not block core use; no data enters improvement pipeline without a matching valid consent record; withdrawal blocks future use; deletion/retention behavior is documented and tested; legal placeholders are resolved before publication.
+
+### P0-B — Secure release and in-app update foundation
+
+- Preserve applicationId and Android signing certificate continuity.
+- Change release pipeline from temporary artifact-only output to a reviewed official GitHub Release with structured changelog and signed version manifest (if direct APK distribution remains the selected channel).
+- Keep manifest-signing key separate from APK signing key; pin public verification key in the app.
+- Implement update metadata repository, signature/channel/version/compatibility checks and SHA-256 verification.
+- Implement download progress, bounded retry, cancellation, storage checks and Android Package Installer handoff; use Play In-App Updates if Play becomes the distribution channel.
+- Never silently install or bypass Android package-signature checks.
+- Test update-over-install, interrupted download, invalid manifest/hash, wrong signing certificate, low storage, cancelled install and data preservation.
+- Define emergency minimum-supported-version policy and compatible recovery/rollback.
+
+**Gate:** tampered or incompatible releases are rejected; valid release updates over the installed app without losing user data; cancellation/failure leaves current version usable; changelog exactly matches installed version.
+
+### P1 — Adaptive performance and device qualification
+
+- Implement DeviceCapabilityProvider and PerformancePolicy without hardware fingerprinting.
+- Add Auto, Resource Saver, Experience Priority and Reduce Motion settings.
+- Bound caches, image loading, prefetch, streaming render batches and background concurrency.
+- Use Macrobenchmark and Baseline Profiles/Startup Profiles where supported; inspect traces before optimization.
+- Test API 23 minimum, low-memory, mid-range, high-capability, tablet/foldable, split-screen, slow network, low battery and thermal stress.
+- Publish only verified performance improvements.
+
+**Gate:** no regression in core task completion/security; no unbounded cache or concurrency; app remains responsive under constrained conditions; benchmark results are recorded per representative device class.
+
+### 11. Legal and technical references
+
+- Vietnam Law No. 91/2025/QH15 on Personal Data Protection and Decree No. 356/2025/ND-CP must be checked against the official texts and current implementing rules before launch.
+- Android Play distribution: Play In-App Updates documentation.
+- Direct APK distribution: Android app-signing/update certificate continuity requirements.
+- Performance: Android Baseline Profiles and Macrobenchmark guidance.
+
+Reference links:
+- https://vanban.chinhphu.vn/?classid=1&docid=214590&pageid=27160&typegroup=
+- https://chinhphu.vn/?classid=0&docid=216387&pageid=27160
+- https://developer.android.com/guide/playcore/in-app-updates
+- https://developer.android.com/studio/publish/app-signing
+- https://developer.android.com/topic/performance/baselineprofiles/overview
+- https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview
