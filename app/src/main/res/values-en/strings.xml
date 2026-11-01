@@ -78,7 +78,7 @@
     <string name="font_small">Small</string>
     <string name="font_default">Default</string>
     <string name="font_large">Large</string>
-    <string name="font_size_help">This setting is combined with Android's accessibility font size.</string>
+    <string name="font_size_help">This setting is combined with Android&apos;s accessibility font size.</string>
     <string name="settings_experience">Feedback</string>
     <string name="haptics_title">Haptic feedback</string>
     <string name="haptics_description">Subtle feedback when creating or saving an item.</string>
@@ -87,7 +87,7 @@
     <string name="settings_language">Language</string>
     <string name="language_description">AgentDock supports Vietnamese and English. On Android 13 and later, choose an app-specific language in system settings.</string>
     <string name="language_button">Open language settings</string>
-    <string name="language_older_android">This device follows the system language. Change Android's language to change the app language.</string>
+    <string name="language_older_android">This device follows the system language. Change Android&apos;s language to change the app language.</string>
     <string name="settings_connections">Connections and security</string>
 
 </resources>
