@@ -1,5 +1,6 @@
-
 # Delivery roadmap
+
+The roadmap separates the working foundation from planned capabilities. A checked item means it is present in the repository and has passed the relevant recorded checks; it does not imply production readiness.
 
 ## Stage 1 — Android foundation
 
@@ -29,30 +30,69 @@
 - [ ] Task creation/control API, idempotency enforcement and consistent error model.
 - [ ] Separate API and worker processes with health checks.
 
-## Stage 3 — Durable agent execution
+## Stage 3 — Durable task lifecycle
 
-- [ ] LangGraph orchestration and explicit bounded agent roles.
-- [ ] OpenHands runtime in an isolated workspace.
+- [ ] Task create/list/detail/pause/resume/cancel endpoints.
+- [ ] Canonical request hashing and idempotent response replay.
+- [ ] Atomic per-task event sequence and append.
+- [ ] SSE replay, reconnect, heartbeat and client deduplication.
 - [ ] Worker lease, heartbeat, retry/backoff, reclaim and recovery.
-- [ ] Definition of Done and evidence-based verification.
+- [ ] Explicit Definition of Done and evidence-backed terminal state.
 
-## Stage 4 — Control and observability
+## Stage 4 — Single-agent vertical slice
 
-- [ ] SSE event stream with resume and deduplication.
-- [ ] Policy Engine, action-bound approvals and audit trail.
-- [ ] Execution timeline with safe log redaction.
-- [ ] Pause, resume, cancel and failure recovery UX.
+- [ ] Server-side provider/model registry and first provider adapter.
+- [ ] Model Gateway contract for capabilities, streaming, usage, timeout and normalized errors.
+- [ ] One Main Agent with a narrow, read-only tool set.
+- [ ] Context builder with provenance and bounded token budget.
+- [ ] End-to-end Android → API → worker → model → SSE → Android flow.
 
-## Stage 5 — Integrations
+## Stage 5 — Policy, approvals and tools
 
-- [ ] Server-side provider/model registry and routing.
+- [ ] Policy Engine with server-side PEP checks immediately before execution.
+- [ ] Typed tool manifests, schema validation, timeout and output validation.
+- [ ] Action-bound approval records and approval UX.
+- [ ] Audit trail, correlation IDs and secret/private-data redaction.
+- [ ] Independent verification and evidence references for each task class.
+
+## Stage 6 — Adaptive intelligence
+
+- [ ] Capability-based model routing and compatible fallback.
+- [ ] Evaluation baseline comparing single-agent and bounded multi-agent execution.
+- [ ] Add Planner/Executor/Verifier only where measured benefit justifies them.
+- [ ] Bounded parallelism, depth, iterations, token, tool, cost and time budgets.
+- [ ] Vietnamese intent, typo, slang, ambiguity and naturalness evaluation.
+
+## Stage 7 — Memory, freshness and artifacts
+
+- [ ] Scoped, provenance-bearing memory with inspect/edit/export/delete controls.
+- [ ] Project memory and context compaction with preserved constraints.
+- [ ] Approved knowledge sources and terminology freshness pipeline.
+- [ ] Artifact metadata, access control, storage, checksums and retention.
 - [ ] GitHub App with least-privilege installation permissions.
-- [ ] MCP registry with per-tool policy, validation and timeout.
-- [ ] Artifacts, diffs, project memory and versioned configuration.
+- [ ] MCP registry with per-tool policy, schema, timeout and audit.
 
-## Stage 6 — Production readiness
+## Stage 8 — Isolated execution and device intelligence
+
+- [ ] OpenHands runtime in isolated workspace for coding tasks only.
+- [ ] Sandbox resource/network/filesystem boundaries and security tests.
+- [ ] Room-backed task/event cache and conflict-aware sync.
+- [ ] WorkManager for deferred sync and notification delivery.
+- [ ] Adaptive layouts, accessibility, localization and reduced motion.
+- [ ] Screen observation with explicit consent and platform-policy review.
+- [ ] Proactive suggestions with opt-in, relevance and anti-spam controls.
+
+## Stage 9 — Production readiness
 
 - [ ] Agent Evaluation Lab and regression suite.
 - [ ] Threat modeling, sandbox/security testing and secret scanning.
 - [ ] Load, latency, recovery, offline and device performance tests.
+- [ ] Backup/restore drill, retention/deletion verification and incident procedures.
 - [ ] Signed release, certificate continuity, update-over-install test and rollback plan.
+- [ ] Staged rollout and backend/worker/client compatibility policy.
+
+## Implementation order
+
+The first coding milestone is a complete **single-agent vertical slice**, not a multi-agent swarm: authenticated task creation, durable events, worker lease, one provider adapter, one Main Agent with a read-only tool, evidence-backed verification and Android task resumption.
+
+See [PRODUCT_SPEC.md](PRODUCT_SPEC.md), [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) and [ARCHITECTURE.md](ARCHITECTURE.md) for product behavior, design decisions and acceptance gates.
