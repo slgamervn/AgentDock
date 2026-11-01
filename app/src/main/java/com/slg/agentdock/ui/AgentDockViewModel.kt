@@ -3,6 +3,7 @@ package com.slg.agentdock.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.slg.agentdock.data.model.AppPreferences
 import com.slg.agentdock.data.model.WorkspaceSnapshot
 import com.slg.agentdock.data.model.WorkspaceTab
 import com.slg.agentdock.data.repository.WorkspaceRepository
@@ -23,6 +24,7 @@ data class AgentDockUiState(
     val activeTabId: String = "",
     val serverUrl: String = "",
     val closedTabs: List<WorkspaceTab> = emptyList(),
+    val preferences: AppPreferences = AppPreferences(),
     val isLoaded: Boolean = false,
 )
 
@@ -52,6 +54,7 @@ class AgentDockViewModel(
                     activeTabId = saved.activeTabId,
                     serverUrl = saved.serverUrl,
                     closedTabs = saved.closedTabs,
+                    preferences = saved.preferences,
                     isLoaded = true,
                 )
             }
@@ -148,6 +151,16 @@ class AgentDockViewModel(
         persistSoon()
     }
 
+    fun updatePreferences(preferences: AppPreferences) {
+        val safePreferences = preferences.copy(
+            themeMode = preferences.themeMode.takeIf { it in setOf("system", "dark", "light") } ?: "system",
+            accentColor = preferences.accentColor.takeIf { it in setOf("emerald", "blue", "amber") } ?: "emerald",
+            fontScale = preferences.fontScale.coerceIn(0.9f, 1.2f),
+        )
+        _uiState.update { it.copy(preferences = safePreferences) }
+        persistSoon()
+    }
+
     fun saveDraft() {
         persistJob?.cancel()
         persistJob = viewModelScope.launch {
@@ -188,6 +201,7 @@ class AgentDockViewModel(
                 activeTabId = activeId,
                 serverUrl = state.serverUrl,
                 closedTabs = state.closedTabs,
+                preferences = state.preferences,
             ),
         )
     }
