@@ -111,3 +111,33 @@ Compose performance is measured, not assumed: stable lazy-list keys, deferred st
 ## Delivery rule
 
 Build a single end-to-end vertical slice before expanding the system: authenticated task creation → durable event store → worker lease → one provider adapter → one Main Agent with a read-only tool → evidence-backed verification → Android SSE timeline and task resumption. Add multi-agent routing, memory, coding sandbox, MCP, screen assist and proactive features only after their prerequisites and evaluation gates pass.
+
+
+## Privacy, consent and legal-document architecture
+
+- Keep Terms of Service, Privacy Policy and consent UI versioned and available from onboarding and Settings.
+- Model consent as purpose-specific records, not a single user-wide boolean. Separate required service processing, optional analytics, memory, per-conversation feedback, evaluation contribution and model training.
+- Store consent purpose, scope, notice version, actor, timestamp, source and withdrawal; enforce the consent decision server-side at data-ingestion and downstream export boundaries.
+- Build a data inventory and processor registry before enabling external model providers. Each provider route must satisfy tenant policy, region, purpose, retention and user choice.
+- A withdrawal blocks future contribution immediately; deletion workflows propagate to controlled stores, derived datasets and processors according to retention obligations. Do not claim deletion from trained model weights without a verifiable unlearning/retraining process.
+- Minimize telemetry and redact prompt/content/secrets from logs. User data is never used for model training by default.
+- Treat minors' data with age-appropriate UX and applicable representative-consent requirements.
+- Legal documents remain drafts until operator identity, actual processing map, contact details and legal review are complete.
+
+## In-app update architecture (planned)
+
+- Add a dedicated update domain/repository under the Android data boundary; UI observes immutable update state through ViewModel/StateFlow.
+- Release metadata is a signed manifest from a pinned official source. Verify manifest signature, channel, expiry, monotonic versionCode, minSdk, ABI, asset URL allowlist, size and SHA-256 before install.
+- For Google Play, use Play In-App Updates. For direct APK distribution, hand off to Android Package Installer after integrity checks and explicit user confirmation.
+- Android package signature continuity remains mandatory; the updater cannot bypass Package Installer or silently grant unknown-source install permission.
+- CI must publish official GitHub Releases and versioned changelog/manifest; current workflow only uploads a temporary Actions artifact and is not sufficient for production updates.
+- Release pipeline protects signing keys, signs metadata separately, verifies APK signatures, records provenance and supports stable/preview channels.
+- Failed/cancelled update leaves current installation and user data intact. Rollback uses a higher versionCode or a tested compatible recovery mechanism, not arbitrary APK downgrade.
+
+## Adaptive device performance architecture (planned)
+
+- DeviceCapabilityProvider gathers only necessary runtime capability signals (API level, memory pressure, thermal/battery state, window size, supported refresh and connectivity); do not fingerprint devices or collect hardware identifiers.
+- PerformancePolicy converts those signals plus user settings into bounded UI effects, cache sizes, prefetch and concurrency.
+- Persist explicit user preferences in DataStore; runtime capability profile is ephemeral unless a coarse non-identifying value is operationally necessary.
+- Preserve core functionality and safety. Degrade decorative effects and speculative work before reducing essential functionality.
+- Use Macrobenchmark, Baseline Profiles/Startup Profiles where supported, trace-based profiling and a representative physical-device matrix. Emulator results do not establish battery/thermal performance.
