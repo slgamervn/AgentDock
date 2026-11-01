@@ -42,16 +42,16 @@ Set `AGENTDOCK_MIGRATION_DATABASE_URL` to the migration role URL and run migrati
 python -m alembic upgrade head
 ```
 
-Then, as the migration role or database administrator, grant only table access to the runtime role:
+Then, as the migration role or database administrator, grant only the required runtime access:
 
 ```sql
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO agentdock_runtime;
-ALTER DEFAULT PRIVILEGES FOR ROLE agentdock_migrator IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO agentdock_runtime;
-REVOKE ALL ON TABLE alembic_version FROM agentdock_runtime;
+GRANT SELECT ON TABLE tenants, users TO agentdock_runtime;
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON TABLE tenant_memberships, tasks, task_events, idempotency_records
+  TO agentdock_runtime;
 ```
 
-Use `AGENTDOCK_DATABASE_URL` for the restricted runtime role. Never copy production credentials into the repository or CI logs.
+Do not grant the runtime role access to `alembic_version`, schema ownership, role creation or `BYPASSRLS`. Future migrations must explicitly grant only the access needed for each new table. Use `AGENTDOCK_DATABASE_URL` for the restricted runtime role. Never copy production credentials into the repository or CI logs.
 
 ## Local development
 
