@@ -96,3 +96,27 @@ The roadmap separates the working foundation from planned capabilities. A checke
 The first coding milestone is a complete **single-agent vertical slice**, not a multi-agent swarm: authenticated task creation, durable events, worker lease, one provider adapter, one Main Agent with a read-only tool, evidence-backed verification and Android task resumption.
 
 See [PRODUCT_SPEC.md](PRODUCT_SPEC.md), [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) and [ARCHITECTURE.md](ARCHITECTURE.md) for product behavior, design decisions and acceptance gates.
+
+
+## Cross-cutting P0 — User trust, privacy and update safety
+
+- [ ] Complete and legally review versioned Terms of Service and Privacy Policy; resolve operator/contact placeholders before publication.
+- [ ] Build data inventory, processor/provider register, retention schedule and cross-border data-flow map.
+- [ ] Implement purpose-specific consent ledger and withdrawal; AI conversation contribution remains OFF by default.
+- [ ] Separate per-conversation feedback, evaluation dataset contribution and model training consent.
+- [ ] Implement user data access/export/correction/deletion request handling and deletion propagation.
+- [ ] Add age-appropriate privacy notices and representative-consent handling where required.
+- [ ] Publish official release notes and signed update metadata; do not use temporary CI artifacts as the production update channel.
+- [ ] Implement in-app update check, changelog, integrity/compatibility checks and Android-confirmed installation.
+- [ ] Preserve APK signing identity and test update-over-install, cancellation, tampering and recovery.
+
+## Cross-cutting P1 — Adaptive performance for all supported devices
+
+- [ ] Implement runtime capability profiles without hardware fingerprinting.
+- [ ] Add Auto, Resource Saver, Experience Priority and Reduce Motion modes.
+- [ ] Bound cache, image loading, prefetch, streaming batches and background concurrency.
+- [ ] Add Macrobenchmark and Baseline Profiles/Startup Profiles where supported.
+- [ ] Test low-memory, mid-range, high-capability, tablet, foldable, split-screen, slow-network, low-battery and thermal-stress devices.
+- [ ] Include only benchmark-verified performance improvements in changelogs.
+
+See [TERMS_OF_SERVICE.md](TERMS_OF_SERVICE.md), [PRIVACY_POLICY.md](PRIVACY_POLICY.md), [UPDATES_AND_RELEASES.md](UPDATES_AND_RELEASES.md) and [DEVICE_PERFORMANCE.md](DEVICE_PERFORMANCE.md).
