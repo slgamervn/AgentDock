@@ -230,3 +230,42 @@ Targets are set after a representative baseline is collected. Do not invent univ
 - No claim that a model's self-evaluation proves correctness.
 - No mandatory Redis, vector database, WebSocket or microservice split before measured need.
 - No dark patterns designed to increase app opening frequency.
+
+
+## 12. User terms, privacy and consent
+
+- Publish separate, versioned Terms of Service and Privacy Policy in Vietnamese-first language, accessible from onboarding and Settings → Legal & Privacy.
+- These documents are drafts until operator identity, actual data flows, providers, retention, legal bases and applicable jurisdictions are verified and legal review is complete.
+- Terms acceptance, privacy notices, optional analytics, memory, feedback submission and AI-improvement contribution are distinct choices. Never bundle unrelated purposes into one consent.
+- AI conversation contribution is OFF by default and is never required to use core features. Provide per-conversation contribution and a separate, explicit future-conversation setting.
+- Evaluation contribution and model training/fine-tuning require separate explanations and consent. Do not claim model-level deletion unless technically demonstrated.
+- Keep a versioned consent ledger: user/subject, purpose, scope, notice version, action, timestamp, source and withdrawal timestamp.
+- Support access, correction, export, restriction, deletion and consent withdrawal workflows where applicable. Propagate deletion to processors and backups according to the published retention design.
+- Do not collect secrets, OTPs, API keys, payment credentials or unnecessary sensitive data for AI improvement.
+- Minors receive age-appropriate notices and legally required parent/guardian consent workflows. Do not infer that a single checkbox is sufficient.
+- Maintain a data inventory, processor register, cross-border transfer map, retention schedule, incident process and auditable access controls.
+
+Draft documents: [Terms of Service](TERMS_OF_SERVICE.md) and [Privacy Policy](PRIVACY_POLICY.md).
+
+## 13. In-app update center
+
+- Settings → About → Updates shows installed version, build, channel, release date, update status and full changelog.
+- Changelog groups changes into Added, Improved, Fixed, Security and Compatibility, and identifies which performance improvements were actually benchmarked.
+- Support check-now, bounded background checks, download progress, pause/resume, integrity verification, compatibility checks and clear install/restart states.
+- Google Play distribution uses Play In-App Updates (flexible for normal updates; immediate only for justified critical updates).
+- Direct APK distribution uses official GitHub Releases, a signed version manifest, pinned public verification key, SHA-256 verification, allowlisted release assets and Android Package Installer confirmation.
+- Never silently install, execute arbitrary update scripts, trust arbitrary URLs or bypass Android package-signature checks.
+- Keep stable and preview channels distinct. Enforce monotonic versionCode and a carefully governed minimum-supported version.
+- A failed download or cancelled install must leave the currently installed app usable. Do not report success until the new version is observed running.
+- The current signed CI artifact workflow is not yet a production update service; see [UPDATES_AND_RELEASES.md](UPDATES_AND_RELEASES.md).
+
+## 14. Adaptive performance across devices
+
+- Optimize by runtime capability and current resource pressure, not brand/model allowlists.
+- Preserve core features, security and privacy across device classes; adapt non-essential effects, prefetch, cache and concurrency.
+- Provide Auto, Resource Saver, Experience Priority and Reduce Motion settings.
+- Test low-memory, mid-range, high-capability, tablet, foldable, split-screen, slow-network, low-battery and thermal-stress scenarios.
+- Use Macrobenchmark, Baseline Profiles/Startup Profiles where supported, traces and real-device measurements. Do not promise universal FPS or speed percentages.
+- Publish only benchmark-supported performance claims in release notes.
+
+See [DEVICE_PERFORMANCE.md](DEVICE_PERFORMANCE.md) for capability profiles, measurement and acceptance criteria.
