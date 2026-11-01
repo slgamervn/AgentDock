@@ -78,7 +78,8 @@ def test_tenant_context_is_transaction_local_and_blocks_cross_tenant_writes() ->
         admin_engine = create_async_engine(ADMIN_DATABASE_URL, pool_pre_ping=True)
         runtime_engine = create_async_engine(RUNTIME_DATABASE_URL, pool_pre_ping=True)
 
-        tenant_a, tenant_b, user_id = uuid4(), uuid4(), uuid4()
+        tenant_a, tenant_b = uuid4(), uuid4()
+        user_a_id, user_b_id = uuid4(), uuid4()
         task_a, task_b = uuid4(), uuid4()
         suffix = uuid4().hex
         try:
@@ -99,22 +100,29 @@ def test_tenant_context_is_transaction_local_and_blocks_cross_tenant_writes() ->
                 await connection.execute(
                     text(
                         "INSERT INTO users (id, email, display_name) "
-                        "VALUES (:user_id, :email, 'RLS test user')"
+                        "VALUES (:user_a, :email_a, 'Tenant A user'), "
+                        "(:user_b, :email_b, 'Tenant B user')"
                     ),
-                    {"user_id": user_id, "email": f"rls-{suffix}@example.test"},
+                    {
+                        "user_a": user_a_id,
+                        "email_a": f"rls-a-{suffix}@example.test",
+                        "user_b": user_b_id,
+                        "email_b": f"rls-b-{suffix}@example.test",
+                    },
                 )
                 await connection.execute(
                     text(
                         "INSERT INTO tenant_memberships (id, tenant_id, user_id, role) "
-                        "VALUES (:membership_a, :tenant_a, :user_id, 'owner'), "
-                        "(:membership_b, :tenant_b, :user_id, 'owner')"
+                        "VALUES (:membership_a, :tenant_a, :user_a, 'owner'), "
+                        "(:membership_b, :tenant_b, :user_b, 'owner')"
                     ),
                     {
                         "membership_a": uuid4(),
                         "membership_b": uuid4(),
                         "tenant_a": tenant_a,
                         "tenant_b": tenant_b,
-                        "user_id": user_id,
+                        "user_a": user_a_id,
+                        "user_b": user_b_id,
                     },
                 )
                 await connection.execute(
@@ -122,31 +130,32 @@ def test_tenant_context_is_transaction_local_and_blocks_cross_tenant_writes() ->
                         "INSERT INTO tasks "
                         "(id, tenant_id, created_by_user_id, title, prompt) "
                         "VALUES "
-                        "(:task_a, :tenant_a, :user_id, 'Task A', 'test prompt'), "
-                        "(:task_b, :tenant_b, :user_id, 'Task B', 'test prompt')"
+                        "(:task_a, :tenant_a, :user_a, 'Task A', 'test prompt'), "
+                        "(:task_b, :tenant_b, :user_b, 'Task B', 'test prompt')"
                     ),
                     {
                         "task_a": task_a,
                         "task_b": task_b,
                         "tenant_a": tenant_a,
                         "tenant_b": tenant_b,
-                        "user_id": user_id,
+                        "user_a": user_a_id,
+                        "user_b": user_b_id,
                     },
                 )
 
-                # A user who belongs to Tenant A must not create a Tenant B task.
+                # Tenant A's member cannot be recorded as the creator in Tenant B.
                 with pytest.raises(DBAPIError):
                     async with connection.begin_nested():
                         await connection.execute(
                             text(
                                 "INSERT INTO tasks "
                                 "(id, tenant_id, created_by_user_id, title, prompt) "
-                                "VALUES (:task_id, :tenant_b, :user_id, 'Invalid actor', 'blocked')"
+                                "VALUES (:task_id, :tenant_b, :user_a, 'Invalid actor', 'blocked')"
                             ),
                             {
                                 "task_id": uuid4(),
                                 "tenant_b": tenant_b,
-                                "user_id": user_id,
+                                "user_a": user_a_id,
                             },
                         )
 
@@ -186,9 +195,13 @@ def test_tenant_context_is_transaction_local_and_blocks_cross_tenant_writes() ->
                         text(
                             "INSERT INTO tasks "
                             "(id, tenant_id, created_by_user_id, title, prompt) "
-                            "VALUES (:task_id, :tenant_b, :user_id, 'Cross tenant', 'blocked')"
+                            "VALUES (:task_id, :tenant_b, :user_a, 'Cross tenant', 'blocked')"
                         ),
-                        {"task_id": uuid4(), "tenant_b": tenant_b, "user_id": user_id},
+                        {
+                            "task_id": uuid4(),
+                            "tenant_b": tenant_b,
+                            "user_a": user_a_id,
+                        },
                     )
         finally:
             await runtime_engine.dispose()
