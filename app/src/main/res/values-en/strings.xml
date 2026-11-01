@@ -63,4 +63,31 @@
     <string name="home_nav">Home</string>
     <string name="tabs_nav">Tabs</string>
     <string name="settings_nav">Settings</string>
+
+    <string name="settings_description">Adjust how AgentDock looks and responds on this device.</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="theme_title">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_light">Light</string>
+    <string name="accent_title">Accent color</string>
+    <string name="accent_emerald">Emerald</string>
+    <string name="accent_blue">Blue</string>
+    <string name="accent_amber">Amber</string>
+    <string name="font_size_title">Text size</string>
+    <string name="font_small">Small</string>
+    <string name="font_default">Default</string>
+    <string name="font_large">Large</string>
+    <string name="font_size_help">This setting is combined with Android's accessibility font size.</string>
+    <string name="settings_experience">Feedback</string>
+    <string name="haptics_title">Haptic feedback</string>
+    <string name="haptics_description">Subtle feedback when creating or saving an item.</string>
+    <string name="sound_title">Interface sounds</string>
+    <string name="sound_description">Use the system click sound for primary actions. Off by default.</string>
+    <string name="settings_language">Language</string>
+    <string name="language_description">AgentDock supports Vietnamese and English. On Android 13 and later, choose an app-specific language in system settings.</string>
+    <string name="language_button">Open language settings</string>
+    <string name="language_older_android">This device follows the system language. Change Android's language to change the app language.</string>
+    <string name="settings_connections">Connections and security</string>
+
 </resources>
