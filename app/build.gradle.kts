@@ -21,6 +21,10 @@ android {
     namespace = "com.slg.agentdock"
     compileSdk = 36
 
+    androidResources {
+        generateLocaleConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.slg.agentdock"
         minSdk = 23
