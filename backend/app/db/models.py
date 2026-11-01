@@ -64,6 +64,12 @@ class Task(Base):
     __tablename__ = "tasks"
     __table_args__ = (
         UniqueConstraint("id", "tenant_id", name="uq_tasks_id_tenant"),
+        ForeignKeyConstraint(
+            ["tenant_id", "created_by_user_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.user_id"],
+            name="fk_tasks_creator_membership",
+            ondelete="RESTRICT",
+        ),
         CheckConstraint(
             "status IN ('QUEUED', 'PLANNING', 'RUNNING', 'WAITING_APPROVAL', "
             "'VERIFYING', 'SUCCEEDED', 'FAILED', 'CANCELLED', 'PAUSED', "
@@ -77,9 +83,7 @@ class Task(Base):
     tenant_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
-    created_by_user_id: Mapped[UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
-    )
+    created_by_user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(
@@ -131,6 +135,12 @@ class IdempotencyRecord(Base):
             "tenant_id", "actor_user_id", "idempotency_key",
             name="uq_idempotency_tenant_actor_key",
         ),
+        ForeignKeyConstraint(
+            ["tenant_id", "actor_user_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.user_id"],
+            name="fk_idempotency_actor_membership",
+            ondelete="RESTRICT",
+        ),
         CheckConstraint("state IN ('IN_PROGRESS', 'COMPLETED')", name="ck_idempotency_state"),
         Index("ix_idempotency_expires_at", "expires_at"),
     )
@@ -139,9 +149,7 @@ class IdempotencyRecord(Base):
     tenant_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
-    actor_user_id: Mapped[UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    actor_user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
     request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     state: Mapped[str] = mapped_column(
