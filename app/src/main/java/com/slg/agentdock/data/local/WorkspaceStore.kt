@@ -112,8 +112,12 @@ class WorkspaceStore(context: Context) {
     }
 }
 
-private fun String?.validatedTheme(): String =
-    if (this in setOf("system", "dark", "light")) this!! else "system"
+private fun String?.validatedTheme(): String = when (this) {
+    "dark", "light" -> this
+    else -> "system"
+}
 
-private fun String?.validatedAccent(): String =
-    if (this in setOf("emerald", "blue", "amber")) this!! else "emerald"
+private fun String?.validatedAccent(): String = when (this) {
+    "blue", "amber" -> this
+    else -> "emerald"
+}
