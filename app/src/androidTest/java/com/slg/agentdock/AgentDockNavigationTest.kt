@@ -3,6 +3,7 @@ package com.slg.agentdock
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -27,6 +28,24 @@ class AgentDockNavigationTest {
 
         composeRule.onNodeWithTag("navigation.home").performClick()
         composeRule.onNodeWithTag("home.screen").assertIsDisplayed()
+    }
+
+    @Test
+    fun settingsCanChangeThemeAccentTextSizeAndFeedback() {
+        composeRule.onNodeWithTag("navigation.settings").performClick()
+        composeRule.onNodeWithTag("settings.screen").assertIsDisplayed()
+
+        composeRule.onNodeWithTag("settings.theme.light").performClick()
+        composeRule.onNodeWithTag("settings.theme.light").assertIsSelected()
+
+        composeRule.onNodeWithTag("settings.accent.blue").performClick()
+        composeRule.onNodeWithTag("settings.accent.blue").assertIsSelected()
+
+        composeRule.onNodeWithTag("settings.fontSize.1.15").performClick()
+        composeRule.onNodeWithTag("settings.fontSize.1.15").assertIsSelected()
+
+        composeRule.onNodeWithTag("settings.haptics").performClick()
+        composeRule.onNodeWithTag("settings.sound").performClick()
     }
 
     @Test
