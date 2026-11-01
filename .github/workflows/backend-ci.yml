@@ -87,18 +87,21 @@ jobs:
       - name: Apply database migrations
         run: python -m alembic upgrade head
 
-      - name: Grant runtime table access without ownership
+      - name: Grant least-privilege runtime table access
         env:
           PGPASSWORD: ci-migrator-password
         run: |
           psql -h 127.0.0.1 -U agentdock_migrator -d agentdock -v ON_ERROR_STOP=1 <<'SQL'
-          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO agentdock_runtime;
-          ALTER DEFAULT PRIVILEGES FOR ROLE agentdock_migrator IN SCHEMA public
-            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO agentdock_runtime;
+          GRANT SELECT ON TABLE tenants, users TO agentdock_runtime;
+          GRANT SELECT, INSERT, UPDATE, DELETE
+            ON TABLE tenant_memberships, tasks, task_events, idempotency_records
+            TO agentdock_runtime;
           SQL
 
-      - name: Verify migration head
-        run: python -m alembic current
+      - name: Verify migration head and ORM schema
+        run: |
+          python -m alembic current
+          python -m alembic check
 
       - name: Run backend tests
         run: python -m pytest -q
