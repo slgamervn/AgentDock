@@ -1,5 +1,6 @@
 package com.slg.agentdock.ui
 
+import com.slg.agentdock.data.model.AppPreferences
 import com.slg.agentdock.data.model.WorkspaceSnapshot
 import com.slg.agentdock.data.model.WorkspaceTab
 import com.slg.agentdock.data.repository.WorkspaceRepository
@@ -154,6 +155,52 @@ class AgentDockViewModelTest {
         runCurrent()
         assertEquals(1, repository.savedSnapshots.size)
         assertEquals("Final value", repository.savedSnapshots.single().tabs.single().draft)
+    }
+
+    @Test
+    fun personalizationPreferencesAreAppliedAndPersisted() = runTest(mainDispatcherRule.dispatcher) {
+        val tab = WorkspaceTab(id = "tab-1")
+        val repository = FakeWorkspaceRepository(
+            WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
+        )
+        val viewModel = AgentDockViewModel(repository)
+        runCurrent()
+
+        val preferences = AppPreferences(
+            themeMode = "light",
+            accentColor = "blue",
+            fontScale = 1.15f,
+            soundEnabled = true,
+            hapticsEnabled = false,
+        )
+        viewModel.updatePreferences(preferences)
+        assertEquals(preferences, viewModel.uiState.value.preferences)
+
+        advanceTimeBy(300)
+        runCurrent()
+        assertEquals(preferences, repository.savedSnapshots.last().preferences)
+    }
+
+    @Test
+    fun personalizationPreferencesRejectUnknownModesAndClampTextScale() = runTest(mainDispatcherRule.dispatcher) {
+        val tab = WorkspaceTab(id = "tab-1")
+        val repository = FakeWorkspaceRepository(
+            WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
+        )
+        val viewModel = AgentDockViewModel(repository)
+        runCurrent()
+
+        viewModel.updatePreferences(
+            AppPreferences(
+                themeMode = "invalid",
+                accentColor = "invalid",
+                fontScale = 5f,
+            ),
+        )
+        val preferences = viewModel.uiState.value.preferences
+        assertEquals("system", preferences.themeMode)
+        assertEquals("emerald", preferences.accentColor)
+        assertEquals(1.2f, preferences.fontScale)
     }
 
     @Test
