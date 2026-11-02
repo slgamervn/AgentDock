@@ -14,7 +14,7 @@ FastAPI control-plane bootstrap with the first PostgreSQL persistence boundary.
 - PostgreSQL row-level security (RLS) is enabled and forced on every tenant-owned table.
 - Docker runs as UID/GID 10001, not root.
 
-This is not a remote task API yet. Authentication, session issuance/revocation, membership authorization endpoints, task CRUD, workers, orchestration and Agent execution are not implemented. The API process does not connect to PostgreSQL at startup, and `/health/live` does not assert database readiness.
+This is not a remote task API yet. Authentication, session issuance/revocation, membership authorization endpoints, task CRUD, workers, orchestration and Agent execution are not implemented. The API constructs an async engine during application startup but does not open a database connection until the readiness check or a database operation. `/health/live` does not assert database readiness.
 
 ## Database roles and tenant isolation
 
