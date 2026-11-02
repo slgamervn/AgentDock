@@ -8,13 +8,30 @@ on:
         required: true
         default: '0.1.0'
         type: string
+      release_channel:
+        description: Stable releases are public; Preview releases are marked as pre-releases.
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - stable
+      release_notes:
+        description: User-facing changelog for this release.
+        required: true
+        type: string
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: agentdock-release-${{ inputs.release_channel }}-${{ inputs.version_name }}
+  cancel-in-progress: false
 
 jobs:
   release:
-    name: Build signed release APK
+    name: Build, verify and publish signed APK
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -57,13 +74,16 @@ jobs:
             printf 'Missing required GitHub Actions secrets: %s\n' "${missing[*]}" >&2
             exit 1
           fi
+
           KEYSTORE_PATH="$RUNNER_TEMP/agentdock-upload.jks"
           printf '%s' "$AGENTDOCK_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
           chmod 600 "$KEYSTORE_PATH"
           test -s "$KEYSTORE_PATH"
+
           keytool -list -keystore "$KEYSTORE_PATH" \
             -storepass "$AGENTDOCK_KEYSTORE_PASSWORD" \
             -alias "$AGENTDOCK_KEY_ALIAS" >/dev/null
+
           CSR_PATH="$RUNNER_TEMP/agentdock-signing-check.csr"
           if ! keytool -certreq -alias "$AGENTDOCK_KEY_ALIAS" \
             -keystore "$KEYSTORE_PATH" \
@@ -76,6 +96,30 @@ jobs:
           rm -f "$CSR_PATH"
           echo "AGENTDOCK_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
 
+      - name: Validate release metadata
+        shell: bash
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ inputs.version_name }}
+          RELEASE_CHANNEL: ${{ inputs.release_channel }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { echo "Invalid workflow run number for versionCode" >&2; exit 1; }
+          [[ "$VERSION_CODE" -le 2100000000 ]] || { echo "versionCode exceeds Android's supported range" >&2; exit 1; }
+          [[ "$VERSION_NAME" =~ ^[0-9A-Za-z][0-9A-Za-z.+_-]*$ ]] || { echo "version_name contains unsupported characters" >&2; exit 1; }
+          [[ "$RELEASE_CHANNEL" == "stable" || "$RELEASE_CHANNEL" == "preview" ]] || { echo "Unsupported release channel" >&2; exit 1; }
+          if [[ -z "$(printf '%s' "$RELEASE_NOTES" | tr -d '[:space:]')" ]]; then
+            echo "Release notes must not be empty" >&2
+            exit 1
+          fi
+
+          TAG="${RELEASE_CHANNEL}-v${VERSION_NAME}"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists. Choose a new version name; release tags are immutable."
+            exit 1
+          fi
+
       - name: Build signed release APK
         env:
           AGENTDOCK_KEYSTORE_PASSWORD: ${{ secrets.AGENTDOCK_KEYSTORE_PASSWORD }}
@@ -86,27 +130,70 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { echo "Invalid workflow run number for versionCode" >&2; exit 1; }
-          [[ "$VERSION_CODE" -le 2100000000 ]] || { echo "versionCode exceeds Android's supported range" >&2; exit 1; }
-          [[ "$VERSION_NAME" =~ ^[0-9A-Za-z][0-9A-Za-z.+_-]*$ ]] || { echo "version_name contains unsupported characters" >&2; exit 1; }
           ./gradlew --no-daemon --stacktrace \
             -PagentdockVersionCode="$VERSION_CODE" \
             -PagentdockVersionName="$VERSION_NAME" \
             assembleRelease
 
-      - name: Verify APK signature
+      - name: Verify APK signature and calculate checksum
+        id: apk
+        shell: bash
+        env:
+          VERSION_NAME: ${{ inputs.version_name }}
+          RELEASE_CHANNEL: ${{ inputs.release_channel }}
         run: |
-          APK_PATH="$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -print -quit)"
-          test -n "$APK_PATH"
+          set -euo pipefail
+          APK_SOURCE="$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -print -quit)"
+          test -n "$APK_SOURCE"
+
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$APKSIGNER"
-          "$APKSIGNER" verify --verbose "$APK_PATH"
+          "$APKSIGNER" verify --verbose "$APK_SOURCE"
 
-      - name: Upload signed APK
+          APK_NAME="agentdock-${RELEASE_CHANNEL}-${VERSION_NAME}.apk"
+          APK_PATH="$RUNNER_TEMP/$APK_NAME"
+          cp "$APK_SOURCE" "$APK_PATH"
+          (cd "$RUNNER_TEMP" && sha256sum "$APK_NAME" > "$APK_NAME.sha256")
+
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+          echo "checksum_path=$APK_PATH.sha256" >> "$GITHUB_OUTPUT"
+          echo "apk_name=$APK_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release and upload APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ inputs.version_name }}
+          RELEASE_CHANNEL: ${{ inputs.release_channel }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+          APK_PATH: ${{ steps.apk.outputs.apk_path }}
+          CHECKSUM_PATH: ${{ steps.apk.outputs.checksum_path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${RELEASE_CHANNEL}-v${VERSION_NAME}"
+          TITLE="AgentDock ${RELEASE_CHANNEL} ${VERSION_NAME}"
+
+          RELEASE_ARGS=()
+          if [[ "$RELEASE_CHANNEL" == "preview" ]]; then
+            RELEASE_ARGS+=(--prerelease)
+          fi
+
+          gh release create "$TAG" \
+            "$APK_PATH" \
+            "$CHECKSUM_PATH" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$TITLE" \
+            --notes "$RELEASE_NOTES" \
+            "${RELEASE_ARGS[@]}"
+
+      - name: Upload signed APK as a workflow artifact
         uses: actions/upload-artifact@v7
         with:
-          name: agentdock-release-${{ inputs.version_name }}-${{ github.run_number }}
-          path: app/build/outputs/apk/release/*.apk
+          name: agentdock-release-${{ inputs.release_channel }}-${{ inputs.version_name }}-${{ github.run_number }}
+          path: |
+            ${{ steps.apk.outputs.apk_path }}
+            ${{ steps.apk.outputs.checksum_path }}
           if-no-files-found: error
           retention-days: 30
 

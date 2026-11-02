@@ -51,18 +51,22 @@ Runner CI được cố định ở Ubuntu 24.04. APK debug được lưu thành
 
 ## Ký APK release
 
-Workflow `Signed Android APK` chỉ chạy thủ công. Tạo bốn GitHub Actions repository secrets trong `Settings → Secrets and variables → Actions`:
+Workflow Signed Android APK chỉ chạy thủ công từ nhánh main. Workflow yêu cầu bốn repository secrets trong Settings → Secrets and variables → Actions:
 
 | Secret | Giá trị |
 |---|---|
-| `AGENTDOCK_KEYSTORE_BASE64` | Nội dung file JKS đã mã hóa Base64 |
-| `AGENTDOCK_KEYSTORE_PASSWORD` | Mật khẩu kho khóa |
-| `AGENTDOCK_KEY_ALIAS` | Alias của entry ký |
-| `AGENTDOCK_KEY_PASSWORD` | Mật khẩu của private key thuộc alias đã chọn; có thể khác mật khẩu JKS |
+| AGENTDOCK_KEYSTORE_BASE64 | Nội dung file JKS đã mã hóa Base64 |
+| AGENTDOCK_KEYSTORE_PASSWORD | Mật khẩu kho khóa |
+| AGENTDOCK_KEY_ALIAS | Alias của entry ký |
+| AGENTDOCK_KEY_PASSWORD | Mật khẩu private key của alias đã chọn |
 
-Workflow giải mã JKS vào thư mục tạm của runner, đặt quyền file hạn chế, kiểm tra alias và thử mở private key bằng `keytool -certreq` trước khi build release; sau đó chạy `apksigner verify`. Nếu kiểm tra private key thất bại, workflow chỉ báo tên secret cần kiểm tra, không in giá trị. File `.jks` bị loại khỏi Git bằng `.gitignore`.
+Workflow xác minh JKS, alias và quyền mở private key; chạy lint/unit tests; build APK; xác minh APK bằng apksigner; sau đó tạo GitHub Release và tải APK cùng file SHA-256 lên Release. Khóa ký chỉ được giải mã trong thư mục tạm của runner và bị xóa ở bước dọn dẹp. Không đưa thông tin bí mật vào Git, issue, PR hoặc log.
 
-Không đổi `applicationId` hoặc thay khóa ký giữa các bản phát hành. Workflow tự dùng `github.run_number` làm `versionCode` tăng dần; bạn chỉ nhập `versionName`. Chưa phát hành bản cài đặt production cho tới khi xác minh được keystore mới trong Actions và kiểm tra cập nhật đè trên thiết bị.
+Khi chạy workflow, nhập versionName, chọn Stable hoặc Preview và cung cấp release notes. versionCode lấy từ GitHub Actions run_number. Tag được tạo theo dạng stable-v<version> hoặc preview-v<version>; Preview được đánh dấu pre-release. Không dùng lại tag đã tồn tại.
+
+Chi tiết: docs/RELEASE_PROCESS.md.
+
+**Giới hạn hiện tại:** GitHub Release publishing không đồng nghĩa in-app updater đã sẵn sàng. Manifest ký số, kiểm tra tải xuống/redirect, đối chiếu chứng thư APK với ứng dụng đã cài và luồng xác nhận cài đặt vẫn là công việc riêng. Chưa quảng bá cập nhật tự động trước khi các bước này được kiểm thử trên thiết bị.
 
 ## Bố cục repository
 
