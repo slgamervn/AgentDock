@@ -34,6 +34,7 @@ def test_liveness_returns_service_metadata() -> None:
             service_name="AgentDock Test API",
             app_version="9.8.7",
             environment="test",
+            database_url=None,
         )
     )
 
@@ -53,6 +54,7 @@ def test_liveness_does_not_expose_environment_or_secrets() -> None:
             service_name="AgentDock API",
             app_version="0.1.0",
             environment="test",
+            database_url=None,
         )
     )
 
@@ -64,7 +66,7 @@ def test_liveness_does_not_expose_environment_or_secrets() -> None:
 
 
 def test_readiness_returns_503_when_database_is_not_configured() -> None:
-    app = create_app(Settings(environment="test"))
+    app = create_app(Settings(environment="test", database_url=None))
 
     with TestClient(app) as client:
         response = client.get("/api/v1/health/ready")
@@ -74,7 +76,7 @@ def test_readiness_returns_503_when_database_is_not_configured() -> None:
 
 
 def test_readiness_returns_ready_when_database_query_succeeds() -> None:
-    app = create_app(Settings(environment="test"))
+    app = create_app(Settings(environment="test", database_url=None))
 
     with TestClient(app) as client:
         app.state.database_engine = _FakeEngine()
@@ -85,7 +87,7 @@ def test_readiness_returns_ready_when_database_query_succeeds() -> None:
 
 
 def test_readiness_does_not_expose_database_errors() -> None:
-    app = create_app(Settings(environment="test"))
+    app = create_app(Settings(environment="test", database_url=None))
 
     with TestClient(app) as client:
         app.state.database_engine = _FakeEngine(
