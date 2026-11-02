@@ -41,7 +41,7 @@ async def readiness(request: Request) -> ReadinessResponse:
     try:
         async with engine.connect() as connection:
             await connection.execute(text("SELECT 1"))
-    except SQLAlchemyError as error:
+    except (SQLAlchemyError, TimeoutError, OSError) as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database is unavailable.",
