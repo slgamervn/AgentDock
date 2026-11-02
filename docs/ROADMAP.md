@@ -23,6 +23,7 @@
 - [x] Add the official Gradle 9.6.1 Wrapper scripts/JAR and pin the distribution SHA-256 checksum.
 - [x] Use the verified Gradle Wrapper for both Android CI and the signed-release workflow.
 - [x] Add a preflight check that verifies the selected alias can unlock its private key without exposing secrets.
+- [x] Add manual Stable/Preview GitHub Release publishing with signed APK verification and SHA-256 assets.
 - [ ] Verify the actual uploaded JKS alias, certificate and passwords with a signed release run.
 
 ## Stage 2 — Backend foundation
@@ -31,6 +32,7 @@
 - [ ] Authentication/session revocation and tenant/user authorization endpoints.
 - [x] Initial PostgreSQL schema, Alembic migration, constraints and indexes for identity, tenant membership, tasks, ordered task events and idempotency.
 - [x] PostgreSQL RLS with FORCE ROW LEVEL SECURITY and CI tests for transaction-scoped tenant isolation using a restricted non-owner runtime role.
+- [x] Database-aware readiness probe with bounded connection timeouts, lifespan-managed engine and secret-safe health tests.
 - [ ] Backup/restore plan and operational database readiness monitoring.
 - [ ] Task creation/control API, idempotency enforcement and consistent error model.
 - [ ] Separate API and worker processes with health checks.
