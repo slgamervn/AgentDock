@@ -12,6 +12,7 @@ internal sealed interface JsonValue {
 
 internal object StrictJsonParser {
     fun parse(input: String, maxChars: Int): JsonValue {
+        require(maxChars >= 0) { "JSON size limit must not be negative" }
         require(input.length <= maxChars) { "JSON exceeds the size limit" }
         val parser = Parser(input)
         val value = parser.parseValue()
@@ -34,12 +35,13 @@ internal object StrictJsonParser {
                 'f' -> parseLiteral("false", JsonValue.BooleanValue(false))
                 'n' -> parseLiteral("null", JsonValue.NullValue)
                 '-', in '0'..'9' -> JsonValue.NumberValue(parseNumber())
-                else -> error("Unexpected JSON token")
+                else -> invalid("Unexpected JSON token")
             }
         }
 
         fun skipWhitespace() {
-            while (!atEnd() && input[index].isWhitespace()) index++
+            // RFC 8259 permits only SP, HTAB, LF and CR outside JSON values.
+            while (!atEnd() && input[index] in JSON_WHITESPACE) index++
         }
 
         fun atEnd(): Boolean = index == input.length
@@ -53,7 +55,9 @@ internal object StrictJsonParser {
                 skipWhitespace()
                 require(!atEnd() && input[index] == '"') { "Object key must be a string" }
                 val key = parseString()
-                require(fields.put(key, parseMemberValue()) == null) { "Duplicate JSON key: $key" }
+                val value = parseMemberValue()
+                require(!fields.containsKey(key)) { "Duplicate JSON key: $key" }
+                fields[key] = value
                 skipWhitespace()
                 if (consume('}')) return JsonValue.Object(fields)
                 require(consume(',')) { "Expected comma between object fields" }
@@ -84,7 +88,11 @@ internal object StrictJsonParser {
             val result = StringBuilder()
             while (!atEnd()) {
                 when (val character = input[index++]) {
-                    '"' -> return result.toString()
+                    '"' -> {
+                        val value = result.toString()
+                        validateSurrogatePairs(value)
+                        return value
+                    }
                     '\\' -> {
                         require(!atEnd()) { "Incomplete escape sequence" }
                         when (val escaped = input[index++]) {
@@ -95,14 +103,33 @@ internal object StrictJsonParser {
                             'r' -> result.append('\r')
                             't' -> result.append('\t')
                             'u' -> result.append(parseUnicodeEscape())
-                            else -> error("Invalid JSON escape")
+                            else -> invalid("Invalid JSON escape")
                         }
                     }
-                    in '\u0000'..'\u001f' -> error("Unescaped control character in string")
+                    in '\u0000'..'\u001f' -> invalid("Unescaped control character in string")
                     else -> result.append(character)
                 }
             }
-            error("Unterminated JSON string")
+            invalid("Unterminated JSON string")
+        }
+
+        private fun validateSurrogatePairs(value: String) {
+            var offset = 0
+            while (offset < value.length) {
+                val character = value[offset]
+                when {
+                    Character.isHighSurrogate(character) -> {
+                        require(
+                            offset + 1 < value.length &&
+                                Character.isLowSurrogate(value[offset + 1]),
+                        ) { "Unpaired high surrogate in JSON string" }
+                        offset += 2
+                    }
+                    Character.isLowSurrogate(character) ->
+                        invalid("Unpaired low surrogate in JSON string")
+                    else -> offset++
+                }
+            }
         }
 
         private fun parseUnicodeEscape(): Char {
@@ -148,5 +175,10 @@ internal object StrictJsonParser {
             }
             return false
         }
+
+        private fun invalid(message: String): Nothing =
+            throw IllegalArgumentException(message)
     }
+
+    private val JSON_WHITESPACE = setOf(' ', '\t', '\n', '\r')
 }
