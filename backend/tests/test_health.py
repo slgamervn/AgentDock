@@ -108,3 +108,18 @@ def test_api_docs_are_disabled_in_production() -> None:
     assert client.get("/redoc").status_code == 404
     assert client.get("/openapi.json").status_code == 404
     assert client.get("/api/v1/health/live").status_code == 200
+
+
+def test_readiness_returns_503_for_connection_timeout_and_network_errors() -> None:
+    for error in (
+        TimeoutError("connection timed out"),
+        OSError("network is unavailable"),
+    ):
+        app = create_app(Settings(environment="test", database_url=None))
+
+        with TestClient(app) as client:
+            app.state.database_engine = _FakeEngine(error)
+            response = client.get("/api/v1/health/ready")
+
+        assert response.status_code == 503
+        assert response.json() == {"detail": "Database is unavailable."}
