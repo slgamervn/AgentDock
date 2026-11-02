@@ -46,8 +46,15 @@ internal data class Changelog(
 internal object UpdateManifestParser {
     private const val MAX_PAYLOAD_CHARS = 64 * 1024
     private const val PACKAGE_NAME = "com.slg.agentdock"
+    private const val RELEASE_HOST = "github.com"
+    private const val MAX_ANDROID_VERSION_CODE = 2_100_000_000L
     private const val MAX_APK_SIZE_BYTES = 512L * 1024 * 1024
+    private const val MAX_SUPPORTED_ABIS = 8
+    private const val MAX_CHANGELOG_ITEMS_PER_SECTION = 30
+    private const val MAX_CHANGELOG_ITEM_CHARS = 240
     private val SHA256_PATTERN = Regex("[0-9a-f]{64}")
+    private val RELEASE_PATH_PATTERN =
+        Regex("/slgamervn/AgentDock/releases/download/[^/]+/[^/]+\\.apk")
     private val REQUIRED_FIELDS = setOf(
         "schemaVersion", "packageName", "versionName", "versionCode", "channel",
         "publishedAt", "issuedAt", "expiresAt", "minimumSupportedVersionCode",
@@ -69,20 +76,37 @@ internal object UpdateManifestParser {
         val publishedAt = fields.requiredDate("publishedAt")
         val issuedAt = fields.requiredDate("issuedAt")
         val expiresAt = fields.requiredDate("expiresAt")
+        require(!publishedAt.after(issuedAt)) { "publishedAt must not be after issuedAt" }
         require(expiresAt.after(issuedAt)) { "expiresAt must be after issuedAt" }
 
+        val versionCode = fields.requiredPositiveLong("versionCode")
+        require(versionCode <= MAX_ANDROID_VERSION_CODE) { "versionCode exceeds Android's supported range" }
+        val minimumSupportedVersionCode = fields.requiredPositiveLong("minimumSupportedVersionCode")
+        require(minimumSupportedVersionCode <= versionCode) {
+            "minimumSupportedVersionCode must not exceed versionCode"
+        }
+        val minSdk = fields.requiredPositiveInt("minSdk")
+        val targetSdk = fields.requiredPositiveInt("targetSdk")
+        require(targetSdk >= minSdk) { "targetSdk must not be lower than minSdk" }
+
         return UpdateManifest(
-            schemaVersion = fields.requiredInt("schemaVersion").also { require(it == 1) { "Unsupported payload schema" } },
-            packageName = fields.requiredString("packageName").also { require(it == PACKAGE_NAME) { "Unexpected package name" } },
-            versionName = fields.requiredString("versionName").also { require(it.isNotBlank()) { "versionName is empty" } },
-            versionCode = fields.requiredPositiveLong("versionCode"),
+            schemaVersion = fields.requiredInt("schemaVersion").also {
+                require(it == 1) { "Unsupported payload schema" }
+            },
+            packageName = fields.requiredString("packageName").also {
+                require(it == PACKAGE_NAME) { "Unexpected package name" }
+            },
+            versionName = fields.requiredString("versionName").also {
+                require(it.isNotBlank() && it.length <= 64) { "versionName is invalid" }
+            },
+            versionCode = versionCode,
             channel = fields.requiredString("channel").toChannel(),
             publishedAt = publishedAt,
             issuedAt = issuedAt,
             expiresAt = expiresAt,
-            minimumSupportedVersionCode = fields.requiredPositiveLong("minimumSupportedVersionCode"),
-            minSdk = fields.requiredPositiveInt("minSdk"),
-            targetSdk = fields.requiredPositiveInt("targetSdk"),
+            minimumSupportedVersionCode = minimumSupportedVersionCode,
+            minSdk = minSdk,
+            targetSdk = targetSdk,
             supportedAbis = fields.requiredStringArray("supportedAbis"),
             apk = fields.requiredObject("apk").toApkMetadata(),
             changelog = fields.requiredObject("changelog").toChangelog(),
@@ -131,10 +155,14 @@ internal object UpdateManifestParser {
         val values = (get(name) as? JsonValue.Array)?.values
             ?: throw IllegalArgumentException("$name must be an array")
         require(values.isNotEmpty()) { "$name must not be empty" }
+        require(values.size <= MAX_SUPPORTED_ABIS) { "$name contains too many entries" }
         return values.map {
             (it as? JsonValue.StringValue)?.value
                 ?: throw IllegalArgumentException("$name must contain strings")
-        }.also { require(it.all(String::isNotBlank)) { "$name contains an empty ABI" } }
+        }.also {
+            require(it.all(String::isNotBlank)) { "$name contains an empty ABI" }
+            require(it.distinct().size == it.size) { "$name contains duplicate ABI values" }
+        }
     }
 
     private fun Map<String, JsonValue>.requiredObject(name: String): Map<String, JsonValue> =
@@ -144,8 +172,21 @@ internal object UpdateManifestParser {
     private fun Map<String, JsonValue>.toApkMetadata(): ApkMetadata {
         require(keys == APK_FIELDS) { "APK fields are invalid" }
         val url = requiredString("url")
-        val uri = try { URI(url) } catch (_: Exception) { throw IllegalArgumentException("APK URL is invalid") }
-        require(uri.scheme == "https" && !uri.host.isNullOrBlank()) { "APK URL host is invalid" }
+        val uri = try {
+            URI(url)
+        } catch (_: Exception) {
+            throw IllegalArgumentException("APK URL is invalid")
+        }
+        require(
+            uri.scheme == "https" &&
+                uri.host == RELEASE_HOST &&
+                uri.rawUserInfo == null &&
+                uri.port == -1 &&
+                uri.rawQuery == null &&
+                uri.rawFragment == null &&
+                uri.path.matches(RELEASE_PATH_PATTERN),
+        ) { "APK URL is not an allowed AgentDock GitHub Release asset URL" }
+
         val size = requiredPositiveLong("sizeBytes")
         require(size <= MAX_APK_SIZE_BYTES) { "APK is too large" }
         val sha256 = requiredString("sha256")
@@ -158,12 +199,25 @@ internal object UpdateManifestParser {
         fun items(name: String): List<String> {
             val values = (get(name) as? JsonValue.Array)?.values
                 ?: throw IllegalArgumentException("Changelog $name must be an array")
+            require(values.size <= MAX_CHANGELOG_ITEMS_PER_SECTION) {
+                "Changelog $name contains too many entries"
+            }
             return values.map {
-                (it as? JsonValue.StringValue)?.value
+                val item = (it as? JsonValue.StringValue)?.value
                     ?: throw IllegalArgumentException("Changelog $name must contain strings")
+                require(item.isNotBlank() && item.length <= MAX_CHANGELOG_ITEM_CHARS) {
+                    "Changelog $name contains an invalid entry"
+                }
+                item
             }
         }
-        return Changelog(items("Added"), items("Improved"), items("Fixed"), items("Security"), items("Compatibility"))
+        return Changelog(
+            items("Added"),
+            items("Improved"),
+            items("Fixed"),
+            items("Security"),
+            items("Compatibility"),
+        )
     }
 
     private fun String.toChannel(): UpdateChannel = when (this) {
