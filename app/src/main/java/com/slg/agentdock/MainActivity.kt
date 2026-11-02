@@ -7,7 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModelProvider
 import com.slg.agentdock.ui.AgentDockApp
 import com.slg.agentdock.ui.AgentDockViewModel
-import com.slg.agentdock.ui.theme.AgentDockTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,9 +20,7 @@ class MainActivity : ComponentActivity() {
         )[AgentDockViewModel::class.java]
 
         setContent {
-            AgentDockTheme {
-                AgentDockApp(viewModel = viewModel)
-            }
+            AgentDockApp(viewModel = viewModel)
         }
     }
 }

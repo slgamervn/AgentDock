@@ -13,6 +13,12 @@
 - [x] Add six deterministic ViewModel tests for workspace restoration, tab lifecycle, debounced persistence and server address validation.
 - [x] CI debug build, lint and unit test workflow.
 - [x] Pin Ubuntu runner image to 24.04 during GitHub's ubuntu-latest migration.
+- [x] Add persisted appearance controls: system/light/dark theme, emerald/blue/amber accent and app text scale.
+- [x] Add optional system click sounds, configurable haptic feedback and app-language settings on Android 13+.
+- [x] Add Vietnamese/English locale resources and automatic per-app locale configuration.
+- [x] Refresh the vector app mark and settings hierarchy without gradients or blur.
+- [x] Add ViewModel and Compose UI coverage for personalization preferences.
+
 - [x] Verify connected UI tests on the Android 36 emulator (navigation and draft flow).
 - [x] Add the official Gradle 9.6.1 Wrapper scripts/JAR and pin the distribution SHA-256 checksum.
 - [x] Use the verified Gradle Wrapper for both Android CI and the signed-release workflow.

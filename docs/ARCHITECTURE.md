@@ -14,6 +14,17 @@ The Android application is a control plane, not the execution host. It owns user
 - The current `Workspace` page clearly distinguishes an on-device draft from a server-executed task.
 - No provider API key, GitHub token, MCP credential or signing key is embedded in the application.
 
+## Android design and personalization
+
+- Native Jetpack Compose and Material 3; no web UI framework is embedded in the Android client.
+- Visual language: neutral surfaces, restrained borders, clear type hierarchy and emerald as the default accent. Light and dark schemes are supported, with blue and amber accent alternatives; no gradient, blur or decorative motion layer.
+- Roboto/system typography remains the default so Android font accessibility settings and Vietnamese glyph coverage remain native. A bounded app-level text scale is multiplied by the system font scale rather than replacing it.
+- Theme, accent, text scale, haptic feedback and optional system click sounds are stored with the local workspace preferences in DataStore.
+- Vietnamese is the default resource locale; English is available through a separate resource set. Android 13+ exposes the app language picker through system app-language settings; older versions follow the device locale.
+- The app icon and in-app mark are vector assets, avoiding large raster assets and image-loading overhead.
+- Interactive targets use Material components or explicit minimum sizing; lazy lists use stable item keys. Respect system font scaling, screen readers, contrast and reduced-motion/device preferences.
+- Haptic feedback is enabled by default; click sounds are opt-in and use the Android system effect. No continuous sound, background audio or decorative animation is used.
+
 ## Backend foundation
 
 - FastAPI exposes GET /api/v1/health/live as a process liveness check only; it is not a database or worker readiness guarantee.
