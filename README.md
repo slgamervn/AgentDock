@@ -82,3 +82,7 @@ backend/
 .github/workflows/      Android CI, backend CI and signed APK workflows
 docs/                   Architecture and delivery notes
 ```
+
+## Product and engineering documentation
+
+The [AgentDock documentation index](docs/README.md) links the product specification, architecture, implementation plan, roadmap, performance guidance, technical research and design references. Privacy and Terms documents are working drafts, not approved legal notices. The in-app update document is a design specification, not an implemented updater.

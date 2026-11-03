@@ -28,7 +28,8 @@ Do not create a multi-agent swarm, a general plugin marketplace or arbitrary dev
 - Android is a public OAuth client: use Authorization Code + PKCE through the system browser or a browser-backed authentication tab. Never embed an OAuth client secret in the APK.
 - The backend validates signature, issuer, audience, expiry and the allowed algorithm set. Extracting a bearer token is not token validation.
 - Map identity by (issuer, subject), not email alone. Do not silently link an existing account just because an identity provider returns a matching email; use a verified account-linking flow.
-- A workspace/tenant ID sent by Android is a selector, never proof of access. The server checks active membership before setting PostgreSQL transaction-local tenant scope.
+- A workspace/tenant ID sent by Android is an untrusted candidate scope, never proof of access. Inside a transaction, set it only as a transaction-local candidate, then query the authenticated user's active membership under RLS before returning or touching tenant data. If membership is absent, roll back and deny. The tenant GUC does not grant membership; it only scopes which membership row can be checked. RLS is defense in depth, not protection against arbitrary SQL execution under a compromised application role.
+- The current runtime role is deliberately not allowed to insert users or tenants. Do not enable self-service account/workspace provisioning until a controlled identity-onboarding mechanism and narrow database privileges have been designed and tested. Never solve this by granting broad write access to the runtime role.
 - Keep the restricted runtime database role separate from the migration owner and retain forced RLS on tenant-owned records.
 
 ## 4. Task lifecycle and durable execution
