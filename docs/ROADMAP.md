@@ -26,6 +26,7 @@ The roadmap separates the working foundation from planned capabilities. A checke
 - [ ] Authentication/session revocation and tenant/user authorization endpoints.
 - [x] Initial PostgreSQL schema, Alembic migration, constraints and indexes for identity, tenant membership, tasks, ordered task events and idempotency.
 - [x] PostgreSQL RLS with FORCE ROW LEVEL SECURITY and CI tests for transaction-scoped tenant isolation using a restricted non-owner runtime role.
+- [x] Database-aware readiness probe with bounded connection timeouts, lifespan-managed engine and secret-safe health tests.
 - [ ] Backup/restore plan and operational database readiness monitoring.
 - [ ] Task creation/control API, idempotency enforcement and consistent error model.
 - [ ] Separate API and worker processes with health checks.

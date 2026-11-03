@@ -10,7 +10,7 @@ on:
       - "docs/ARCHITECTURE.md"
       - "docs/ROADMAP.md"
   pull_request:
-    branches: [main]
+    branches: [main, feature/backend-readiness]
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"

@@ -5,14 +5,16 @@ FastAPI control-plane bootstrap with the first PostgreSQL persistence boundary.
 ## Implemented
 
 - Versioned API prefix: `/api/v1`.
-- `GET /api/v1/health/live` is a process liveness check only.
+- `GET /api/v1/health/live` is a process liveness check and never requires a database connection.
+- `GET /api/v1/health/ready` executes `SELECT 1` against the configured runtime database and returns 503 when the database is not configured or unavailable. It is a database readiness probe, not a migration-version or worker-readiness check.
+- The API creates the async engine during application lifespan and disposes it during shutdown. Connection establishment and pool acquisition are bounded.
 - Runtime configuration uses the `AGENTDOCK_` prefix; database URLs use `SecretStr` in application settings.
 - SQLAlchemy async engine/session helpers and Alembic migrations.
 - Initial records: tenants, users, tenant memberships, tasks, ordered task events and idempotency records.
 - PostgreSQL row-level security (RLS) is enabled and forced on every tenant-owned table.
 - Docker runs as UID/GID 10001, not root.
 
-This is not a remote task API yet. Authentication, session issuance/revocation, membership authorization endpoints, task CRUD, workers, orchestration and Agent execution are not implemented. The API process does not connect to PostgreSQL at startup, and `/health/live` does not assert database readiness.
+This is not a remote task API yet. Authentication, session issuance/revocation, membership authorization endpoints, task CRUD, workers, orchestration and Agent execution are not implemented. The API constructs an async engine during application startup but does not open a database connection until the readiness check or a database operation. `/health/live` does not assert database readiness.
 
 ## Database roles and tenant isolation
 
@@ -63,7 +65,7 @@ Use Python 3.14 and a virtual environment. From this directory:
 4. Apply migrations with `python -m alembic upgrade head`.
 5. Start the API with `uvicorn app.main:app --reload`.
 
-API liveness: http://127.0.0.1:8000/api/v1/health/live. Interactive docs are available at http://127.0.0.1:8000/docs outside production mode.
+API liveness: http://127.0.0.1:8000/api/v1/health/live. Database readiness: http://127.0.0.1:8000/api/v1/health/ready. The readiness route requires a configured and reachable runtime PostgreSQL database. Interactive docs are available at http://127.0.0.1:8000/docs outside production mode.
 
 ## Tests
 
