@@ -5,10 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 
 def create_database_engine(database_url: str) -> AsyncEngine:
-    """Create the async PostgreSQL engine used by API/worker processes."""
+    """Create the bounded async PostgreSQL engine used by API/worker processes."""
     if not database_url.startswith("postgresql+asyncpg://"):
         raise ValueError("AgentDock requires a postgresql+asyncpg database URL.")
-    return create_async_engine(database_url, pool_pre_ping=True)
+    return create_async_engine(
+        database_url,
+        pool_pre_ping=True,
+        pool_timeout=5,
+        connect_args={"timeout": 5},
+    )
 
 
 def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
