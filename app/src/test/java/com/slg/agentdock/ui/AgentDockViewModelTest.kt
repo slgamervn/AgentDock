@@ -61,7 +61,7 @@ class AgentDockViewModelTest {
     }
 
     @Test
-    fun draftTextUpdatesOnlyTheActiveTabAndTitleIsGeneratedOnSave() = runTest(mainDispatcherRule.dispatcher) {
+    fun draftEditStaysOutOfWorkspaceStateUntilSaved() = runTest(mainDispatcherRule.dispatcher) {
         val tab = WorkspaceTab(id = "tab-1")
         val repository = FakeWorkspaceRepository(
             WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
@@ -69,38 +69,66 @@ class AgentDockViewModelTest {
         val viewModel = AgentDockViewModel(repository)
         runCurrent()
 
-        val chromeBeforeTyping = viewModel.chromeState.value
         val workspaceBeforeTyping = viewModel.uiState.value
+        val chromeBeforeTyping = viewModel.chromeState.value
         viewModel.updateDraft(tab.id, "  First line  \nSecond line")
         runCurrent()
 
-        assertEquals(chromeBeforeTyping, viewModel.chromeState.value)
-        assertEquals(workspaceBeforeTyping, viewModel.uiState.value)
+        assertTrue("Draft typing must not replace the persisted workspace state", workspaceBeforeTyping === viewModel.uiState.value)
+        assertTrue("Draft typing must not invalidate app chrome state", chromeBeforeTyping === viewModel.chromeState.value)
         assertEquals("  First line  \nSecond line", viewModel.activeTab.value?.draft)
-        assertEquals("", viewModel.uiState.value.tabs.single().title)
         assertEquals("", viewModel.uiState.value.tabs.single().draft)
 
         viewModel.saveDraft()
         runCurrent()
         assertEquals("  First line  \nSecond line", viewModel.uiState.value.tabs.single().draft)
         assertEquals("First line", viewModel.uiState.value.tabs.single().title)
+    }
 
-        viewModel.renameTab(tab.id, "  My   custom title  ")
-        assertEquals("My custom title", viewModel.uiState.value.tabs.single().title)
+    @Test
+    fun customTitleSurvivesAutosavingDraftEdits() = runTest(mainDispatcherRule.dispatcher) {
+        val tab = WorkspaceTab(
+            id = "custom-tab",
+            title = "My custom title",
+            isTitleCustom = true,
+        )
+        val repository = FakeWorkspaceRepository(
+            WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
+        )
+        val viewModel = AgentDockViewModel(repository)
+        runCurrent()
 
         viewModel.updateDraft(tab.id, "A different task")
+        advanceTimeBy(300)
         runCurrent()
-        assertEquals("My custom title", viewModel.uiState.value.tabs.single().title)
-        assertEquals("First line", viewModel.uiState.value.tabs.single().draft)
-        assertEquals("A different task", viewModel.activeTab.value?.draft)
+
+        val savedTab = repository.savedSnapshots.last().tabs.single()
+        assertEquals("My custom title", savedTab.title)
+        assertEquals("A different task", savedTab.draft)
+    }
+
+    @Test
+    fun clearingCustomTitleRestoresAutomaticTitleOnNextSave() = runTest(mainDispatcherRule.dispatcher) {
+        val tab = WorkspaceTab(
+            id = "renamed-tab",
+            title = "Old custom title",
+            isTitleCustom = true,
+        )
+        val repository = FakeWorkspaceRepository(
+            WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
+        )
+        val viewModel = AgentDockViewModel(repository)
+        runCurrent()
 
         viewModel.renameTab(tab.id, "")
         viewModel.updateDraft(tab.id, "Automatically named again")
-        assertEquals("", viewModel.uiState.value.tabs.single().title)
-        assertEquals("A different task", viewModel.uiState.value.tabs.single().draft)
         viewModel.saveDraft()
         runCurrent()
-        assertEquals("Automatically named again", viewModel.uiState.value.tabs.single().title)
+
+        val savedTab = repository.savedSnapshots.last().tabs.single()
+        assertEquals("Automatically named again", savedTab.title)
+        assertEquals("Automatically named again", savedTab.draft)
+        assertTrue(!savedTab.isTitleCustom)
     }
 
     @Test
