@@ -2,7 +2,6 @@
 package com.slg.agentdock.ui.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,7 +10,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -45,14 +45,16 @@ fun WorkspaceTabStrip(
             .padding(start = 12.dp, end = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .horizontalScroll(rememberScrollState()),
+        LazyRow(
+            modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            tabs.forEachIndexed { index, tab ->
+            itemsIndexed(
+                items = tabs,
+                key = { _, tab -> tab.id },
+                contentType = { _, _ -> "workspace-tab" },
+            ) { index, tab ->
                 val selected = tab.id == activeTabId
                 val tabLabel = if (tab.title.isBlank()) {
                     "${stringResource(R.string.new_task)} ${index + 1}"
