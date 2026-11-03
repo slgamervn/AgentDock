@@ -52,6 +52,8 @@ def make_token(signing_key, **overrides: Any) -> str:
         "aud": AUDIENCE,
         "iat": 1_700_000_000,
         "exp": 1_900_000_600,
+        "client_id": "agentdock-android",
+        "jti": "test-access-token-id",
         "email": "private@example.test",
         "roles": ["should-not-be-returned"],
     }
@@ -103,6 +105,8 @@ def test_missing_bearer_token_is_rejected(oidc_settings, signing_key) -> None:
         {"aud": "another-api"},
         {"sub": ""},
         {"exp": 1_700_000_000},
+        {"client_id": ""},
+        {"jti": ""},
     ],
 )
 def test_invalid_claims_are_rejected(signing_key, oidc_settings, overrides) -> None:
@@ -115,6 +119,36 @@ def test_invalid_claims_are_rejected(signing_key, oidc_settings, overrides) -> N
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid or missing bearer token."}
+
+
+@pytest.mark.parametrize("missing_claim", ["client_id", "jti"])
+def test_missing_required_rfc9068_claim_is_rejected(
+    signing_key,
+    oidc_settings,
+    missing_claim: str,
+) -> None:
+    claims = {
+        "iss": ISSUER,
+        "sub": "provider-user-123",
+        "aud": AUDIENCE,
+        "iat": 1_700_000_000,
+        "exp": 1_900_000_600,
+        "client_id": "agentdock-android",
+        "jti": "test-access-token-id",
+    }
+    del claims[missing_claim]
+    token = jwt.encode(
+        claims,
+        signing_key,
+        algorithm="RS256",
+        headers={"kid": "test-key-1", "typ": "at+jwt"},
+    )
+    with build_client(oidc_settings, signing_key) as client:
+        response = client.get(
+            "/api/v1/auth/identity",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert response.status_code == 401
 
 
 def test_oversized_bearer_token_is_rejected(signing_key, oidc_settings) -> None:

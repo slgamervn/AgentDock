@@ -77,7 +77,7 @@ def _verify_access_token_sync(
             audience=settings.oidc_audience,
             issuer=settings.oidc_issuer,
             leeway=settings.oidc_clock_skew_seconds,
-            options={"require": ["exp", "iat", "iss", "sub", "aud"]},
+            options={"require": ["exp", "iat", "iss", "sub", "aud", "client_id", "jti"]},
         )
     except PyJWKClientConnectionError as error:
         raise OIDCProviderUnavailable from error
@@ -93,6 +93,13 @@ def _verify_access_token_sync(
         raise InvalidOIDCToken("Invalid issuer")
     if isinstance(expires_at, bool) or not isinstance(expires_at, (int, float)):
         raise InvalidOIDCToken("Invalid expiration")
+
+    client_id = claims.get("client_id")
+    if not isinstance(client_id, str) or not client_id or len(client_id) > 255:
+        raise InvalidOIDCToken("Invalid client ID")
+    token_id = claims.get("jti")
+    if not isinstance(token_id, str) or not token_id or len(token_id) > 255:
+        raise InvalidOIDCToken("Invalid token identifier")
 
     authorized_party = settings.oidc_authorized_party
     token_authorized_party = claims.get("azp")
