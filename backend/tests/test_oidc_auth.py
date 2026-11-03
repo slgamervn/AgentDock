@@ -45,7 +45,11 @@ def oidc_settings() -> Settings:
     )
 
 
-def make_token(signing_key, **overrides: Any) -> str:
+def make_token(
+    signing_key,
+    token_type: str = "at+jwt",
+    **overrides: Any,
+) -> str:
     claims = {
         "iss": ISSUER,
         "sub": "provider-user-123",
@@ -62,7 +66,7 @@ def make_token(signing_key, **overrides: Any) -> str:
         claims,
         signing_key,
         algorithm="RS256",
-        headers={"kid": "test-key-1", "typ": "at+jwt"},
+        headers={"kid": "test-key-1", "typ": token_type},
     )
 
 
@@ -88,6 +92,21 @@ def test_valid_access_token_returns_minimal_identity(signing_key, oidc_settings)
     }
     assert "private@example.test" not in response.text
     assert "should-not-be-returned" not in response.text
+
+
+@pytest.mark.parametrize("token_type", ["at+jwt", "application/at+jwt"])
+def test_accepts_both_rfc9068_access_token_types(
+    signing_key,
+    oidc_settings,
+    token_type: str,
+) -> None:
+    token = make_token(signing_key, token_type=token_type)
+    with build_client(oidc_settings, signing_key) as client:
+        response = client.get(
+            "/api/v1/auth/identity",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert response.status_code == 200
 
 
 def test_missing_bearer_token_is_rejected(oidc_settings, signing_key) -> None:
