@@ -14,7 +14,9 @@ FastAPI control-plane bootstrap with the first PostgreSQL persistence boundary.
 - PostgreSQL row-level security (RLS) is enabled and forced on every tenant-owned table.
 - Docker runs as UID/GID 10001, not root.
 
-This is not a remote task API yet. Authentication, session issuance/revocation, membership authorization endpoints, task CRUD, workers, orchestration and Agent execution are not implemented. The API constructs an async engine during application startup but does not open a database connection until the readiness check or a database operation. `/health/live` does not assert database readiness.
+The API now has an optional OIDC JWT access-token verification boundary. When configured, `GET /api/v1/auth/identity` checks the RFC 9068 access-token type (`at+jwt` or `application/at+jwt`), signature against the configured HTTPS JWKS endpoint, a fixed allowlist of asymmetric algorithms, issuer, API audience and time claims; it returns only issuer, subject and expiry. Missing or non-access-token `typ` values are rejected; do not send OIDC ID tokens. A provider-specific non-RFC 9068 token format requires a separately reviewed adapter. JWKS retrieval runs off the event loop, is cached, and has a bounded timeout. Invalid tokens return 401; temporary JWKS connection failures return a generic 503.
+
+This is **not a complete sign-in or account system**. Android's Authorization Code + PKCE flow, provider-specific token contract, identity-to-user mapping, first-user/workspace provisioning, internal session issuance/rotation/revocation, tenant membership authorization, task CRUD, workers and Agent execution are still not implemented. Do not protect production task routes with this verifier alone until the provider's access-token contract and server-side user/session authorization are integrated and tested. The API constructs an async engine during application startup but does not open a database connection until the readiness check or a database operation. `/health/live` does not assert database readiness.
 
 ## Database roles and tenant isolation
 
@@ -72,3 +74,9 @@ API liveness: http://127.0.0.1:8000/api/v1/health/live. Database readiness: http
 Run `python -m compileall -q app migrations tests`, then `python -m pytest -q`. PostgreSQL isolation tests require `AGENTDOCK_TEST_ADMIN_DATABASE_URL` and `AGENTDOCK_TEST_DATABASE_URL`; they verify a real non-owner, non-superuser runtime role, forced RLS, transaction-local tenant scope, cross-tenant read isolation and rejected cross-tenant writes. Those tests are always enabled in GitHub Actions.
 
 Copy `.env.example` for local configuration. Never commit real `.env` files, credentials or signing material.
+
+## Optional OIDC access-token verification
+
+Set `AGENTDOCK_OIDC_ISSUER`, `AGENTDOCK_OIDC_AUDIENCE` and `AGENTDOCK_OIDC_JWKS_URL` together. The issuer and JWKS URLs must use HTTPS and must be provisioned by the operator, never supplied by a request. The audience identifies the AgentDock API/resource server. The default algorithm allowlist is RS256; optional algorithms must remain asymmetric and explicitly allowlisted. The configured JWKS client caches keys and uses a bounded network timeout.
+
+The protected `GET /api/v1/auth/identity` endpoint is a verification probe and a reference for future protected routes. It does not create an AgentDock user or session. The API currently does not map `(issuer, subject)` to a user, rotate/revoke application sessions, create workspaces, or verify tenant membership. Keep task routes unavailable until those authorization layers are implemented. Never send an ID token to this endpoint; configure and validate the identity provider's access-token contract for the AgentDock API audience.
