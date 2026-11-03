@@ -1,6 +1,6 @@
 # AgentDock Android Macrobenchmark
 
-This benchmark measures Compose frame timing while a long draft is entered into the Home screen text field.
+This benchmark measures Compose frame timing while a long draft is typed into the Home screen text field one key event at a time. It uses a fixed lowercase ASCII prompt and space key events so each character exercises the normal text-input update path.
 
 ## Build
 
