@@ -1,7 +1,9 @@
 package com.slg.agentdock.macrobenchmark
 
+import android.view.KeyEvent
 import androidx.benchmark.macro.FrameTimingMetric
-import androidx.benchmark.macro.junit4.MacrobenchmarkRule
+import androidx.benchmark.macro.MacrobenchmarkRule
+import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.uiautomator.By
@@ -12,7 +14,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Measures frame timing after a long draft is entered into the Home Compose text field.
+ * Measures frame timing while a long draft is typed one key at a time
+ * into the Home Compose text field.
  *
  * Run on a physical Android device. Emulator frame timings are not representative
  * of the performance users experience on their phones.
@@ -24,7 +27,7 @@ class DraftTypingFrameTimingBenchmark {
     val benchmarkRule = MacrobenchmarkRule()
 
     @Test
-    fun enterLongDraftInHomeEditor() {
+    fun typeLongDraftOneKeyAtATime() {
         benchmarkRule.measureRepeated(
             packageName = TARGET_PACKAGE,
             metrics = listOf(FrameTimingMetric()),
@@ -39,18 +42,30 @@ class DraftTypingFrameTimingBenchmark {
                 device.pressBack()
             },
         ) {
-            val field = findDraftField()
-            field.click()
-            field.text = LONG_DRAFT
+            findDraftField().click()
+            LONG_DRAFT.forEach { character ->
+                typeCharacter(character)
+            }
         }
     }
 
-    private fun androidx.benchmark.macro.MacrobenchmarkScope.findDraftField(): UiObject2 =
+    private fun MacrobenchmarkScope.findDraftField(): UiObject2 =
         checkNotNull(
             device.wait(Until.findObject(By.res(DRAFT_FIELD_RESOURCE_ID)), UI_TIMEOUT_MS),
         ) {
             "Home draft input was not found. Check benchmark test-tag semantics."
         }
+
+    private fun MacrobenchmarkScope.typeCharacter(character: Char) {
+        val keyCode = when (character) {
+            ' ' -> KeyEvent.KEYCODE_SPACE
+            in 'a'..'z' -> KeyEvent.KEYCODE_A + (character - 'a')
+            else -> error("Unsupported benchmark character: $character")
+        }
+        check(device.pressKeyCode(keyCode)) {
+            "Could not inject key event for character: $character"
+        }
+    }
 
     private companion object {
         const val TARGET_PACKAGE = "com.slg.agentdock"
@@ -58,9 +73,9 @@ class DraftTypingFrameTimingBenchmark {
         const val UI_TIMEOUT_MS = 5_000L
         const val ITERATIONS = 5
         val LONG_DRAFT = (
-            "Review the project structure, identify the main implementation risks, " +
-                "prepare a concise plan, validate the changes, and summarize the test results. " +
-                "Preserve existing behavior and keep the workspace responsive while editing. "
-            ).repeat(4)
+            "review project structure identify performance risks prepare concise plan " +
+                "validate changes summarize results preserve current behavior and keep " +
+                "the editor responsive while text is entered "
+            ).repeat(3)
     }
 }
