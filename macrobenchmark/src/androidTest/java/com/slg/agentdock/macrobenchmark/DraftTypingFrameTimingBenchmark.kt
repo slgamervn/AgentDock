@@ -3,7 +3,6 @@ package com.slg.agentdock.macrobenchmark
 import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.MacrobenchmarkRule
 import androidx.benchmark.macro.MacrobenchmarkScope
-import androidx.benchmark.macro.StartupMode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiObject2
@@ -28,7 +27,6 @@ class DraftTypingFrameTimingBenchmark {
         packageName = TARGET_PACKAGE,
         metrics = listOf(FrameTimingMetric()),
         iterations = ITERATIONS,
-        startupMode = StartupMode.WARM,
         setupBlock = {
             pressHome()
             startActivityAndWait()
