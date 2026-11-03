@@ -3,7 +3,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.v1.auth import router as auth_router
 from app.api.v1.health import router as health_router
+from app.auth.oidc import create_jwks_client
 from app.core.config import Settings, get_settings
 from app.db.session import create_database_engine
 
@@ -34,7 +36,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     application.state.settings = configuration
     application.state.database_engine = None
+    application.state.oidc_jwks_client = create_jwks_client(configuration)
     application.include_router(health_router, prefix="/api/v1")
+    application.include_router(auth_router, prefix="/api/v1")
     return application
 
 
