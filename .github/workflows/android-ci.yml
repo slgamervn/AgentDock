@@ -50,7 +50,7 @@ jobs:
       - name: Run unit tests and build debug and benchmark APKs
         run: ./gradlew --no-daemon --stacktrace lintDebug testDebugUnitTest assembleDebug :macrobenchmark:assembleBenchmark
 
-      - name: Run Compose UI tests on Android 36
+      - name: Run app Compose UI tests on Android 36
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 36
@@ -60,7 +60,7 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -no-snapshot -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest
+          script: ./gradlew --no-daemon --stacktrace :app:connectedDebugAndroidTest
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
