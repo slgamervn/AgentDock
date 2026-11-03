@@ -56,7 +56,7 @@ class DraftTypingFrameTimingBenchmark {
         const val DRAFT_FIELD_RESOURCE_ID = "home.taskInput"
         const val UI_TIMEOUT_MS = 5_000L
         const val ITERATIONS = 5
-        const val LONG_DRAFT =
+        val LONG_DRAFT =
             "Review the project structure, identify the main implementation risks, " +
                 "prepare a concise plan, validate the changes, and summarize the test results. " +
                 "Preserve existing behavior and keep the workspace responsive while editing. "
