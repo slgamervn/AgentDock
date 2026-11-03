@@ -22,7 +22,7 @@ The Android application is a control plane, not the execution host. It owns user
 - Alembic owns versioned schema changes. The first migration creates tenants, users, tenant memberships, tasks, ordered task events and idempotency records, including the indexes and constraints needed by the initial model.
 - RLS is enabled and forced on every tenant-owned table. The tenant policy compares tenant_id with the transaction-local app.current_tenant_id setting and defaults to deny when no tenant context exists.
 - Migrations and runtime use separate database roles. The runtime role must be NOSUPERUSER, NOBYPASSRLS and not own tenant tables. A superuser or BYPASSRLS role can bypass PostgreSQL row policies.
-- Before setting tenant context, server-side authorization must validate the signed-in user's membership. RLS protects database access boundaries but does not replace authentication, authorization or protection against arbitrary SQL execution.
+- The server begins a transaction, sets the client-supplied tenant ID only as a transaction-local candidate scope, and queries the authenticated user's active membership under RLS before accessing tenant data. Missing membership causes rollback and denial. The candidate GUC alone does not grant permission; RLS is defense in depth, not protection against arbitrary SQL execution under a compromised application role.
 - CI applies migrations and verifies read/write isolation against a real PostgreSQL service, including a restricted runtime role.
 
 ## Backend direction (planned; not implemented yet)
