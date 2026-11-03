@@ -46,20 +46,20 @@ private const val ROUTE_SETTINGS = "settings"
 
 @Composable
 fun AgentDockApp(viewModel: AgentDockViewModel) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val chromeState by viewModel.chromeState.collectAsStateWithLifecycle()
     AgentDockTheme(
-        themeMode = state.preferences.themeMode,
-        accentColor = state.preferences.accentColor,
-        fontScale = state.preferences.fontScale,
+        themeMode = chromeState.preferences.themeMode,
+        accentColor = chromeState.preferences.accentColor,
+        fontScale = chromeState.preferences.fontScale,
     ) {
-        AgentDockAppContent(viewModel, state)
+        AgentDockAppContent(viewModel, chromeState)
     }
 }
 
 @Composable
 private fun AgentDockAppContent(
     viewModel: AgentDockViewModel,
-    state: AgentDockUiState,
+    chromeState: AgentDockChromeState,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val navController = rememberNavController()
@@ -72,10 +72,10 @@ private fun AgentDockAppContent(
     val invalidServerAddressMessage = androidx.compose.ui.res.stringResource(R.string.invalid_server_address)
 
     fun feedback() {
-        if (state.preferences.hapticsEnabled) {
+        if (chromeState.preferences.hapticsEnabled) {
             haptics.performHapticFeedback(HapticFeedbackType.Confirm)
         }
-        if (state.preferences.soundEnabled) {
+        if (chromeState.preferences.soundEnabled) {
             view.playSoundEffect(SoundEffectConstants.CLICK)
         }
     }
@@ -91,7 +91,7 @@ private fun AgentDockAppContent(
         }
     }
 
-    if (!state.isLoaded || state.tabs.isEmpty()) {
+    if (!chromeState.isLoaded || chromeState.tabs.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center,
@@ -104,7 +104,7 @@ private fun AgentDockAppContent(
         return
     }
 
-    val activeTab = state.tabs.firstOrNull { it.id == state.activeTabId } ?: state.tabs.first()
+    val activeTabId = chromeState.activeTabId
 
     fun navigateTo(route: String) {
         navController.navigate(route) {
@@ -130,8 +130,8 @@ private fun AgentDockAppContent(
         ) {
             AppHeader()
             WorkspaceTabStrip(
-                tabs = state.tabs,
-                activeTabId = activeTab.id,
+                tabs = chromeState.tabs,
+                activeTabId = activeTabId,
                 onSelect = { tabId ->
                     viewModel.selectTab(tabId)
                     navigateTo(ROUTE_WORKSPACE)
@@ -153,8 +153,8 @@ private fun AgentDockAppContent(
                 popExitTransition = { androidx.compose.animation.ExitTransition.None },
             ) {
                 composable(ROUTE_HOME) {
-                    HomeScreen(
-                        tab = activeTab,
+                    HomeDestination(
+                        viewModel = viewModel,
                         onDraftChange = viewModel::updateDraft,
                         onSaveDraft = {
                             feedback()
@@ -164,10 +164,8 @@ private fun AgentDockAppContent(
                     )
                 }
                 composable(ROUTE_TABS) {
-                    TabsScreen(
-                        tabs = state.tabs,
-                        closedTabs = state.closedTabs,
-                        activeTabId = activeTab.id,
+                    TabsDestination(
+                        viewModel = viewModel,
                         onOpen = { tabId ->
                             viewModel.selectTab(tabId)
                             navigateTo(ROUTE_WORKSPACE)
@@ -184,8 +182,8 @@ private fun AgentDockAppContent(
                     )
                 }
                 composable(ROUTE_WORKSPACE) {
-                    WorkspaceScreen(
-                        tab = activeTab,
+                    WorkspaceDestination(
+                        viewModel = viewModel,
                         onDraftChange = viewModel::updateDraft,
                         onSaveDraft = {
                             feedback()
@@ -194,9 +192,8 @@ private fun AgentDockAppContent(
                     )
                 }
                 composable(ROUTE_SETTINGS) {
-                    SettingsScreen(
-                        serverUrl = state.serverUrl,
-                        preferences = state.preferences,
+                    SettingsDestination(
+                        viewModel = viewModel,
                         onSaveServerUrl = {
                             feedback()
                             viewModel.saveServerUrl(it)
@@ -207,4 +204,64 @@ private fun AgentDockAppContent(
             }
         }
     }
+}
+
+
+@Composable
+private fun HomeDestination(
+    viewModel: AgentDockViewModel,
+    onDraftChange: (String, String) -> Unit,
+    onSaveDraft: () -> Unit,
+) {
+    val tab by viewModel.activeTab.collectAsStateWithLifecycle()
+    tab?.let { HomeScreen(tab = it, onDraftChange = onDraftChange, onSaveDraft = onSaveDraft) }
+}
+
+@Composable
+private fun WorkspaceDestination(
+    viewModel: AgentDockViewModel,
+    onDraftChange: (String, String) -> Unit,
+    onSaveDraft: () -> Unit,
+) {
+    val tab by viewModel.activeTab.collectAsStateWithLifecycle()
+    tab?.let { WorkspaceScreen(tab = it, onDraftChange = onDraftChange, onSaveDraft = onSaveDraft) }
+}
+
+@Composable
+private fun TabsDestination(
+    viewModel: AgentDockViewModel,
+    onOpen: (String) -> Unit,
+    onAdd: () -> Unit,
+    onClose: (String) -> Unit,
+    onTogglePinned: (String) -> Unit,
+    onRename: (String, String) -> Unit,
+    onRestoreLastClosed: () -> Unit,
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    TabsScreen(
+        tabs = state.tabs,
+        closedTabs = state.closedTabs,
+        activeTabId = state.activeTabId,
+        onOpen = onOpen,
+        onAdd = onAdd,
+        onClose = onClose,
+        onTogglePinned = onTogglePinned,
+        onRename = onRename,
+        onRestoreLastClosed = onRestoreLastClosed,
+    )
+}
+
+@Composable
+private fun SettingsDestination(
+    viewModel: AgentDockViewModel,
+    onSaveServerUrl: (String) -> Unit,
+    onPreferencesChange: (com.slg.agentdock.data.model.AppPreferences) -> Unit,
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    SettingsScreen(
+        serverUrl = state.serverUrl,
+        preferences = state.preferences,
+        onSaveServerUrl = onSaveServerUrl,
+        onPreferencesChange = onPreferencesChange,
+    )
 }
