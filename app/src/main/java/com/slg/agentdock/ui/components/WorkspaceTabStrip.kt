@@ -28,11 +28,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.slg.agentdock.R
-import com.slg.agentdock.data.model.WorkspaceTab
+import com.slg.agentdock.ui.WorkspaceTabSummary
 
 @Composable
 fun WorkspaceTabStrip(
-    tabs: List<WorkspaceTab>,
+    tabs: List<WorkspaceTabSummary>,
     activeTabId: String,
     onSelect: (String) -> Unit,
     onAdd: () -> Unit,
