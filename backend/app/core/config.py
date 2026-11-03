@@ -50,9 +50,10 @@ class Settings(BaseSettings):
                     or not parsed.hostname
                     or parsed.username is not None
                     or parsed.password is not None
+                    or parsed.query
                     or parsed.fragment
                 ):
-                    raise ValueError(f"OIDC {label} must be an absolute HTTPS URL without credentials or fragments.")
+                    raise ValueError(f"OIDC {label} must be an absolute HTTPS URL without credentials, query strings or fragments.")
             if not (self.oidc_audience or "").strip():
                 raise ValueError("OIDC_AUDIENCE must not be empty.")
             if not self.oidc_allowed_algorithms:

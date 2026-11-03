@@ -6,7 +6,6 @@ import jwt
 from fastapi.concurrency import run_in_threadpool
 from jwt.exceptions import (
     PyJWKClientConnectionError,
-    PyJWKClientError,
     PyJWTError,
 )
 
@@ -119,5 +118,3 @@ async def verify_access_token(
         raise
     except (TimeoutError, OSError) as error:
         raise OIDCProviderUnavailable from error
-    except PyJWKClientError as error:
-        raise InvalidOIDCToken from error
