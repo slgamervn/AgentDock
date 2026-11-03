@@ -61,7 +61,7 @@ class AgentDockViewModelTest {
     }
 
     @Test
-    fun draftUpdatesGenerateTitleUntilUserSetsCustomTitle() = runTest(mainDispatcherRule.dispatcher) {
+    fun draftTextUpdatesOnlyTheActiveTabAndTitleIsGeneratedOnSave() = runTest(mainDispatcherRule.dispatcher) {
         val tab = WorkspaceTab(id = "tab-1")
         val repository = FakeWorkspaceRepository(
             WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
@@ -69,7 +69,16 @@ class AgentDockViewModelTest {
         val viewModel = AgentDockViewModel(repository)
         runCurrent()
 
+        val chromeBeforeTyping = viewModel.chromeState.value
         viewModel.updateDraft(tab.id, "  First line  \nSecond line")
+        runCurrent()
+
+        assertEquals(chromeBeforeTyping, viewModel.chromeState.value)
+        assertEquals("  First line  \nSecond line", viewModel.activeTab.value?.draft)
+        assertEquals("", viewModel.uiState.value.tabs.single().title)
+
+        viewModel.saveDraft()
+        runCurrent()
         assertEquals("First line", viewModel.uiState.value.tabs.single().title)
 
         viewModel.renameTab(tab.id, "  My   custom title  ")
@@ -81,10 +90,10 @@ class AgentDockViewModelTest {
 
         viewModel.renameTab(tab.id, "")
         viewModel.updateDraft(tab.id, "Automatically named again")
-        assertEquals("Automatically named again", viewModel.uiState.value.tabs.single().title)
-
-        advanceTimeBy(300)
+        assertEquals("", viewModel.uiState.value.tabs.single().title)
+        viewModel.saveDraft()
         runCurrent()
+        assertEquals("Automatically named again", viewModel.uiState.value.tabs.single().title)
     }
 
     @Test
