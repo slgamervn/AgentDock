@@ -89,6 +89,7 @@ class AgentDockViewModelTest {
         assertEquals("My custom title", viewModel.uiState.value.tabs.single().title)
 
         viewModel.updateDraft(tab.id, "A different task")
+        runCurrent()
         assertEquals("My custom title", viewModel.uiState.value.tabs.single().title)
         assertEquals("First line", viewModel.uiState.value.tabs.single().draft)
         assertEquals("A different task", viewModel.activeTab.value?.draft)
@@ -113,6 +114,7 @@ class AgentDockViewModelTest {
         runCurrent()
 
         viewModel.updateDraft(first.id, "First updated")
+        runCurrent()
         assertEquals("First updated", viewModel.activeTab.value?.draft)
 
         viewModel.selectTab(second.id)
