@@ -84,6 +84,7 @@ class AgentDockViewModel(
     val events = _events.asSharedFlow()
 
     private var persistJob: Job? = null
+    private val pendingDraftTabIds = mutableSetOf<String>()
 
     init {
         viewModelScope.launch {
@@ -119,8 +120,9 @@ class AgentDockViewModel(
     }
 
     fun updateDraft(tabId: String, value: String) {
+        if (_uiState.value.tabs.none { it.id == tabId }) return
+        pendingDraftTabIds += tabId
         _uiState.update { state ->
-            if (state.tabs.none { it.id == tabId }) return@update state
             state.copy(
                 tabs = state.tabs.map { tab ->
                     if (tab.id == tabId) tab.copy(draft = value) else tab
@@ -145,6 +147,7 @@ class AgentDockViewModel(
     }
 
     fun closeTab(tabId: String) {
+        commitPendingDraftMetadata()
         _uiState.update { state ->
             val closing = state.tabs.firstOrNull { it.id == tabId } ?: return@update state
             val remaining = state.tabs.filterNot { it.id == tabId }
@@ -195,23 +198,7 @@ class AgentDockViewModel(
     }
 
     fun saveDraft() {
-        // Generate the tab title on an explicit save, not on every keystroke.
-        val savedAt = System.currentTimeMillis()
-        _uiState.update { state ->
-            state.copy(
-                tabs = state.tabs.map { tab ->
-                    if (tab.id != state.activeTabId) tab
-                    else {
-                        val generatedTitle = if (tab.isTitleCustom) {
-                            tab.title
-                        } else {
-                            tab.draft.substringBefore('\n').trim().take(42).ifBlank { tab.title }
-                        }
-                        tab.copy(title = generatedTitle, updatedAt = savedAt)
-                    }
-                },
-            )
-        }
+        commitPendingDraftMetadata()
         persistJob?.cancel()
         persistJob = viewModelScope.launch {
             persistCurrentState()
@@ -225,6 +212,7 @@ class AgentDockViewModel(
             _events.tryEmit(AgentDockEvent.InvalidServerAddress)
             return
         }
+        commitPendingDraftMetadata()
         _uiState.update { it.copy(serverUrl = normalized) }
         persistJob?.cancel()
         persistJob = viewModelScope.launch {
@@ -237,7 +225,31 @@ class AgentDockViewModel(
         persistJob?.cancel()
         persistJob = viewModelScope.launch {
             delay(PERSIST_DEBOUNCE_MS)
+            commitPendingDraftMetadata()
             persistCurrentState()
+        }
+    }
+
+    /**
+     * Finalizes title/timestamp metadata once after a draft-edit burst.
+     * Text changes remain cheap while autosave preserves the previous naming behavior.
+     */
+    private fun commitPendingDraftMetadata() {
+        if (pendingDraftTabIds.isEmpty()) return
+        val changedTabIds = pendingDraftTabIds.toSet()
+        pendingDraftTabIds.clear()
+        val savedAt = System.currentTimeMillis()
+        _uiState.update { state ->
+            val updatedTabs = state.tabs.map { tab ->
+                if (tab.id !in changedTabIds) return@map tab
+                val generatedTitle = if (tab.isTitleCustom) {
+                    tab.title
+                } else {
+                    tab.draft.substringBefore('\n').trim().take(42).ifBlank { tab.title }
+                }
+                tab.copy(title = generatedTitle, updatedAt = savedAt)
+            }
+            state.copy(tabs = updatedTabs)
         }
     }
 
