@@ -15,6 +15,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -24,6 +28,20 @@ data class AgentDockUiState(
     val activeTabId: String = "",
     val serverUrl: String = "",
     val closedTabs: List<WorkspaceTab> = emptyList(),
+    val preferences: AppPreferences = AppPreferences(),
+    val isLoaded: Boolean = false,
+)
+
+/** Small navigation-only data. Draft contents stay inside the active screen. */
+data class WorkspaceTabSummary(
+    val id: String,
+    val title: String,
+)
+
+data class AgentDockChromeState(
+    val tabs: List<WorkspaceTabSummary> = emptyList(),
+    val activeTabId: String = "",
+    val serverUrl: String = "",
     val preferences: AppPreferences = AppPreferences(),
     val isLoaded: Boolean = false,
 )
@@ -39,6 +57,28 @@ class AgentDockViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AgentDockUiState())
     val uiState = _uiState.asStateFlow()
+
+    // Draft keystrokes update only the active screen. The app shell observes
+    // this lightweight projection and is not invalidated by draft text changes.
+    val chromeState = _uiState
+        .map { state ->
+            AgentDockChromeState(
+                tabs = state.tabs.map { tab -> WorkspaceTabSummary(tab.id, tab.title) },
+                activeTabId = state.activeTabId,
+                serverUrl = state.serverUrl,
+                preferences = state.preferences,
+                isLoaded = state.isLoaded,
+            )
+        }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AgentDockChromeState())
+
+    val activeTab = _uiState
+        .map { state ->
+            state.tabs.firstOrNull { it.id == state.activeTabId } ?: state.tabs.firstOrNull()
+        }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _events = MutableSharedFlow<AgentDockEvent>(extraBufferCapacity = 1)
     val events = _events.asSharedFlow()
@@ -80,17 +120,10 @@ class AgentDockViewModel(
 
     fun updateDraft(tabId: String, value: String) {
         _uiState.update { state ->
+            if (state.tabs.none { it.id == tabId }) return@update state
             state.copy(
                 tabs = state.tabs.map { tab ->
-                    if (tab.id != tabId) tab
-                    else {
-                        val autoTitle = value.lineSequence().firstOrNull().orEmpty().trim().take(42)
-                        tab.copy(
-                            title = if (tab.isTitleCustom) tab.title else autoTitle,
-                            draft = value,
-                            updatedAt = System.currentTimeMillis(),
-                        )
-                    }
+                    if (tab.id == tabId) tab.copy(draft = value) else tab
                 },
             )
         }
@@ -162,6 +195,23 @@ class AgentDockViewModel(
     }
 
     fun saveDraft() {
+        // Generate the tab title on an explicit save, not on every keystroke.
+        val savedAt = System.currentTimeMillis()
+        _uiState.update { state ->
+            state.copy(
+                tabs = state.tabs.map { tab ->
+                    if (tab.id != state.activeTabId) tab
+                    else {
+                        val generatedTitle = if (tab.isTitleCustom) {
+                            tab.title
+                        } else {
+                            tab.draft.substringBefore('\n').trim().take(42).ifBlank { tab.title }
+                        }
+                        tab.copy(title = generatedTitle, updatedAt = savedAt)
+                    }
+                },
+            )
+        }
         persistJob?.cancel()
         persistJob = viewModelScope.launch {
             persistCurrentState()
