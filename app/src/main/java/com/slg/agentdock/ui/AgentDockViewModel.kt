@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
@@ -73,10 +74,16 @@ class AgentDockViewModel(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, AgentDockChromeState())
 
-    val activeTab = _uiState
-        .map { state ->
-            state.tabs.firstOrNull { it.id == state.activeTabId } ?: state.tabs.firstOrNull()
+    // Keep keystroke-level draft edits out of the workspace tab list. This
+    // avoids copying every tab on each character while the editor remains live.
+    private val _draftEdits = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    val activeTab = combine(_uiState, _draftEdits) { state, draftEdits ->
+        val selected = state.tabs.firstOrNull { it.id == state.activeTabId } ?: state.tabs.firstOrNull()
+        selected?.let { tab ->
+            draftEdits[tab.id]?.let { draft -> tab.copy(draft = draft) } ?: tab
         }
+    }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -84,7 +91,6 @@ class AgentDockViewModel(
     val events = _events.asSharedFlow()
 
     private var persistJob: Job? = null
-    private val pendingDraftTabIds = mutableSetOf<String>()
 
     init {
         viewModelScope.launch {
@@ -120,19 +126,14 @@ class AgentDockViewModel(
     }
 
     fun updateDraft(tabId: String, value: String) {
-        if (_uiState.value.tabs.none { it.id == tabId }) return
-        pendingDraftTabIds += tabId
-        _uiState.update { state ->
-            state.copy(
-                tabs = state.tabs.map { tab ->
-                    if (tab.id == tabId) tab.copy(draft = value) else tab
-                },
-            )
-        }
+        val tab = _uiState.value.tabs.firstOrNull { it.id == tabId } ?: return
+        if ((_draftEdits.value[tabId] ?: tab.draft) == value) return
+        _draftEdits.update { edits -> edits + (tabId to value) }
         persistSoon()
     }
 
     fun renameTab(tabId: String, value: String) {
+        commitPendingDraftMetadata()
         val safeTitle = value.trim().replace(Regex("\\s+"), " ").take(48)
         _uiState.update { state ->
             state.copy(
@@ -235,19 +236,23 @@ class AgentDockViewModel(
      * Text changes remain cheap while autosave preserves the previous naming behavior.
      */
     private fun commitPendingDraftMetadata() {
-        if (pendingDraftTabIds.isEmpty()) return
-        val changedTabIds = pendingDraftTabIds.toSet()
-        pendingDraftTabIds.clear()
+        val pendingDrafts = _draftEdits.value
+        if (pendingDrafts.isEmpty()) return
+        _draftEdits.value = emptyMap()
         val savedAt = System.currentTimeMillis()
         _uiState.update { state ->
             val updatedTabs = state.tabs.map { tab ->
-                if (tab.id !in changedTabIds) return@map tab
+                val pendingDraft = pendingDrafts[tab.id] ?: return@map tab
                 val generatedTitle = if (tab.isTitleCustom) {
                     tab.title
                 } else {
-                    tab.draft.substringBefore('\n').trim().take(42).ifBlank { tab.title }
+                    pendingDraft.substringBefore('\n').trim().take(42).ifBlank { tab.title }
                 }
-                tab.copy(title = generatedTitle, updatedAt = savedAt)
+                tab.copy(
+                    draft = pendingDraft,
+                    title = generatedTitle,
+                    updatedAt = savedAt,
+                )
             }
             state.copy(tabs = updatedTabs)
         }
