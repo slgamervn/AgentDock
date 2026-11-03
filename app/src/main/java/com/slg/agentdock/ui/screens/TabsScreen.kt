@@ -32,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -59,12 +60,14 @@ fun TabsScreen(
     onRestoreLastClosed: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    val filteredTabs = tabs
-        .filter { tab ->
-            query.isBlank() || tab.title.contains(query, ignoreCase = true) ||
-                tab.draft.contains(query, ignoreCase = true)
-        }
-        .sortedWith(compareByDescending<WorkspaceTab> { it.isPinned }.thenByDescending { it.updatedAt })
+    val filteredTabs = remember(tabs, query) {
+        tabs
+            .filter { tab ->
+                query.isBlank() || tab.title.contains(query, ignoreCase = true) ||
+                    tab.draft.contains(query, ignoreCase = true)
+            }
+            .sortedWith(compareByDescending<WorkspaceTab> { it.isPinned }.thenByDescending { it.updatedAt })
+    }
 
     Column(
         modifier = Modifier

@@ -61,7 +61,7 @@ class AgentDockViewModelTest {
     }
 
     @Test
-    fun draftUpdatesGenerateTitleUntilUserSetsCustomTitle() = runTest(mainDispatcherRule.dispatcher) {
+    fun draftEditStaysOutOfWorkspaceStateUntilSaved() = runTest(mainDispatcherRule.dispatcher) {
         val tab = WorkspaceTab(id = "tab-1")
         val repository = FakeWorkspaceRepository(
             WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
@@ -69,22 +69,96 @@ class AgentDockViewModelTest {
         val viewModel = AgentDockViewModel(repository)
         runCurrent()
 
+        val workspaceBeforeTyping = viewModel.uiState.value
+        val chromeBeforeTyping = viewModel.chromeState.value
         viewModel.updateDraft(tab.id, "  First line  \nSecond line")
-        assertEquals("First line", viewModel.uiState.value.tabs.single().title)
+        runCurrent()
 
-        viewModel.renameTab(tab.id, "  My   custom title  ")
-        assertEquals("My custom title", viewModel.uiState.value.tabs.single().title)
+        assertTrue("Draft typing must not replace the persisted workspace state", workspaceBeforeTyping === viewModel.uiState.value)
+        assertTrue("Draft typing must not invalidate app chrome state", chromeBeforeTyping === viewModel.chromeState.value)
+        assertEquals("  First line  \nSecond line", viewModel.activeTab.value?.draft)
+        assertEquals("", viewModel.uiState.value.tabs.single().draft)
+
+        viewModel.saveDraft()
+        runCurrent()
+        assertEquals("  First line  \nSecond line", viewModel.uiState.value.tabs.single().draft)
+        assertEquals("First line", viewModel.uiState.value.tabs.single().title)
+    }
+
+    @Test
+    fun customTitleSurvivesAutosavingDraftEdits() = runTest(mainDispatcherRule.dispatcher) {
+        val tab = WorkspaceTab(
+            id = "custom-tab",
+            title = "My custom title",
+            isTitleCustom = true,
+        )
+        val repository = FakeWorkspaceRepository(
+            WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
+        )
+        val viewModel = AgentDockViewModel(repository)
+        runCurrent()
 
         viewModel.updateDraft(tab.id, "A different task")
-        assertEquals("My custom title", viewModel.uiState.value.tabs.single().title)
-        assertEquals("A different task", viewModel.uiState.value.tabs.single().draft)
+        advanceTimeBy(300)
+        runCurrent()
+
+        val savedTab = repository.savedSnapshots.last().tabs.single()
+        assertEquals("My custom title", savedTab.title)
+        assertEquals("A different task", savedTab.draft)
+    }
+
+    @Test
+    fun clearingCustomTitleRestoresAutomaticTitleOnNextSave() = runTest(mainDispatcherRule.dispatcher) {
+        val tab = WorkspaceTab(
+            id = "renamed-tab",
+            title = "Old custom title",
+            isTitleCustom = true,
+        )
+        val repository = FakeWorkspaceRepository(
+            WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
+        )
+        val viewModel = AgentDockViewModel(repository)
+        runCurrent()
 
         viewModel.renameTab(tab.id, "")
         viewModel.updateDraft(tab.id, "Automatically named again")
-        assertEquals("Automatically named again", viewModel.uiState.value.tabs.single().title)
+        viewModel.saveDraft()
+        runCurrent()
+
+        val savedTab = repository.savedSnapshots.last().tabs.single()
+        assertEquals("Automatically named again", savedTab.title)
+        assertEquals("Automatically named again", savedTab.draft)
+        assertTrue(!savedTab.isTitleCustom)
+    }
+
+    @Test
+    fun switchingTabsKeepsEachPendingDraftUntilAutosave() = runTest(mainDispatcherRule.dispatcher) {
+        val first = WorkspaceTab(id = "first", draft = "First old")
+        val second = WorkspaceTab(id = "second", draft = "Second old")
+        val repository = FakeWorkspaceRepository(
+            WorkspaceSnapshot(tabs = listOf(first, second), activeTabId = first.id),
+        )
+        val viewModel = AgentDockViewModel(repository)
+        runCurrent()
+
+        viewModel.updateDraft(first.id, "First updated")
+        runCurrent()
+        assertEquals("First updated", viewModel.activeTab.value?.draft)
+
+        viewModel.selectTab(second.id)
+        runCurrent()
+        assertEquals("Second old", viewModel.activeTab.value?.draft)
+
+        viewModel.updateDraft(second.id, "Second updated")
+        viewModel.selectTab(first.id)
+        runCurrent()
+        assertEquals("First updated", viewModel.activeTab.value?.draft)
 
         advanceTimeBy(300)
         runCurrent()
+        val savedTabs = repository.savedSnapshots.last().tabs.associateBy { it.id }
+        assertEquals("First updated", savedTabs.getValue(first.id).draft)
+        assertEquals("Second updated", savedTabs.getValue(second.id).draft)
     }
 
     @Test
@@ -112,6 +186,28 @@ class AgentDockViewModelTest {
 
         advanceTimeBy(300)
         runCurrent()
+    }
+
+    @Test
+    fun closingTabCommitsAnUnsavedDraftBeforeMovingItToClosedHistory() = runTest(mainDispatcherRule.dispatcher) {
+        val tab = WorkspaceTab(id = "tab-to-close")
+        val repository = FakeWorkspaceRepository(
+            WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
+        )
+        val viewModel = AgentDockViewModel(repository)
+        runCurrent()
+
+        viewModel.updateDraft(tab.id, "Draft that must survive closing")
+        viewModel.closeTab(tab.id)
+
+        val state = viewModel.uiState.value
+        assertEquals("Draft that must survive closing", state.closedTabs.single().draft)
+        assertEquals("Draft that must survive closing", state.closedTabs.single().title)
+        assertNotEquals(tab.id, state.activeTabId)
+
+        advanceTimeBy(300)
+        runCurrent()
+        assertEquals("Draft that must survive closing", repository.savedSnapshots.last().closedTabs.single().draft)
     }
 
     @Test
@@ -155,6 +251,7 @@ class AgentDockViewModelTest {
         runCurrent()
         assertEquals(1, repository.savedSnapshots.size)
         assertEquals("Final value", repository.savedSnapshots.single().tabs.single().draft)
+        assertEquals("Final value", repository.savedSnapshots.single().tabs.single().title)
     }
 
     @Test

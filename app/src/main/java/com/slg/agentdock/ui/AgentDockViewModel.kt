@@ -15,6 +15,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -24,6 +29,20 @@ data class AgentDockUiState(
     val activeTabId: String = "",
     val serverUrl: String = "",
     val closedTabs: List<WorkspaceTab> = emptyList(),
+    val preferences: AppPreferences = AppPreferences(),
+    val isLoaded: Boolean = false,
+)
+
+/** Small navigation-only data. Draft contents stay inside the active screen. */
+data class WorkspaceTabSummary(
+    val id: String,
+    val title: String,
+)
+
+data class AgentDockChromeState(
+    val tabs: List<WorkspaceTabSummary> = emptyList(),
+    val activeTabId: String = "",
+    val serverUrl: String = "",
     val preferences: AppPreferences = AppPreferences(),
     val isLoaded: Boolean = false,
 )
@@ -39,6 +58,34 @@ class AgentDockViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AgentDockUiState())
     val uiState = _uiState.asStateFlow()
+
+    // Draft keystrokes update only the active screen. The app shell observes
+    // this lightweight projection and is not invalidated by draft text changes.
+    val chromeState = _uiState
+        .map { state ->
+            AgentDockChromeState(
+                tabs = state.tabs.map { tab -> WorkspaceTabSummary(tab.id, tab.title) },
+                activeTabId = state.activeTabId,
+                serverUrl = state.serverUrl,
+                preferences = state.preferences,
+                isLoaded = state.isLoaded,
+            )
+        }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AgentDockChromeState())
+
+    // Keep keystroke-level draft edits out of the workspace tab list. This
+    // avoids copying every tab on each character while the editor remains live.
+    private val _draftEdits = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    val activeTab = combine(_uiState, _draftEdits) { state, draftEdits ->
+        val selected = state.tabs.firstOrNull { it.id == state.activeTabId } ?: state.tabs.firstOrNull()
+        selected?.let { tab ->
+            draftEdits[tab.id]?.let { draft -> tab.copy(draft = draft) } ?: tab
+        }
+    }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _events = MutableSharedFlow<AgentDockEvent>(extraBufferCapacity = 1)
     val events = _events.asSharedFlow()
@@ -79,25 +126,14 @@ class AgentDockViewModel(
     }
 
     fun updateDraft(tabId: String, value: String) {
-        _uiState.update { state ->
-            state.copy(
-                tabs = state.tabs.map { tab ->
-                    if (tab.id != tabId) tab
-                    else {
-                        val autoTitle = value.lineSequence().firstOrNull().orEmpty().trim().take(42)
-                        tab.copy(
-                            title = if (tab.isTitleCustom) tab.title else autoTitle,
-                            draft = value,
-                            updatedAt = System.currentTimeMillis(),
-                        )
-                    }
-                },
-            )
-        }
+        val tab = _uiState.value.tabs.firstOrNull { it.id == tabId } ?: return
+        if ((_draftEdits.value[tabId] ?: tab.draft) == value) return
+        _draftEdits.update { edits -> edits + (tabId to value) }
         persistSoon()
     }
 
     fun renameTab(tabId: String, value: String) {
+        commitPendingDraftMetadata()
         val safeTitle = value.trim().replace(Regex("\\s+"), " ").take(48)
         _uiState.update { state ->
             state.copy(
@@ -112,6 +148,7 @@ class AgentDockViewModel(
     }
 
     fun closeTab(tabId: String) {
+        commitPendingDraftMetadata()
         _uiState.update { state ->
             val closing = state.tabs.firstOrNull { it.id == tabId } ?: return@update state
             val remaining = state.tabs.filterNot { it.id == tabId }
@@ -162,6 +199,7 @@ class AgentDockViewModel(
     }
 
     fun saveDraft() {
+        commitPendingDraftMetadata()
         persistJob?.cancel()
         persistJob = viewModelScope.launch {
             persistCurrentState()
@@ -175,6 +213,7 @@ class AgentDockViewModel(
             _events.tryEmit(AgentDockEvent.InvalidServerAddress)
             return
         }
+        commitPendingDraftMetadata()
         _uiState.update { it.copy(serverUrl = normalized) }
         persistJob?.cancel()
         persistJob = viewModelScope.launch {
@@ -187,8 +226,38 @@ class AgentDockViewModel(
         persistJob?.cancel()
         persistJob = viewModelScope.launch {
             delay(PERSIST_DEBOUNCE_MS)
+            commitPendingDraftMetadata()
             persistCurrentState()
         }
+    }
+
+    /**
+     * Finalizes title/timestamp metadata once after a draft-edit burst.
+     * Text changes remain cheap while autosave preserves the previous naming behavior.
+     */
+    private fun commitPendingDraftMetadata() {
+        val pendingDrafts = _draftEdits.value
+        if (pendingDrafts.isEmpty()) return
+        val savedAt = System.currentTimeMillis()
+        _uiState.update { state ->
+            val updatedTabs = state.tabs.map { tab ->
+                val pendingDraft = pendingDrafts[tab.id] ?: return@map tab
+                val generatedTitle = if (tab.isTitleCustom) {
+                    tab.title
+                } else {
+                    pendingDraft.substringBefore('\n').trim().take(42).ifBlank { tab.title }
+                }
+                tab.copy(
+                    draft = pendingDraft,
+                    title = generatedTitle,
+                    updatedAt = savedAt,
+                )
+            }
+            state.copy(tabs = updatedTabs)
+        }
+        // Publish the committed snapshot before clearing the overlay so the
+        // editor never briefly receives the previous draft value.
+        _draftEdits.value = emptyMap()
     }
 
     private suspend fun persistCurrentState() {
