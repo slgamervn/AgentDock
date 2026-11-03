@@ -45,7 +45,7 @@ Runner CI được cố định ở Ubuntu 24.04. APK debug được lưu thành
 - Python 3.14, FastAPI, Pydantic Settings; dependency được pin trong `backend/requirements.txt`.
 - SQLAlchemy async + asyncpg và Alembic; schema đầu tiên lưu tenants, users, memberships, tasks, task events và idempotency records.
 - PostgreSQL RLS được bật và FORCE trên toàn bộ bảng tenant-scoped; runtime role tách khỏi migration role và không có `BYPASSRLS`.
-- Tenant context sử dụng transaction-local setting; backend phải kiểm tra membership ở server trước khi gắn tenant context.
+- Trong transaction, backend đặt tenant ID do client chọn làm phạm vi ứng viên bằng transaction-local setting, sau đó truy vấn membership của user đã xác thực dưới RLS trước khi đọc/ghi dữ liệu tenant. Không có membership thì rollback và từ chối; tenant ID tự nó không cấp quyền.
 - Backend CI chạy migration và kiểm tra RLS trên PostgreSQL thật, đồng thời chạy pytest và build Docker image.
 - `GET /api/v1/health/live` chỉ xác nhận process đang hoạt động; API chưa kết nối DB khi khởi động, chưa có readiness endpoint, authentication, remote task API hay Agent runtime.
 
@@ -82,3 +82,7 @@ backend/
 .github/workflows/      Android CI, backend CI and signed APK workflows
 docs/                   Architecture and delivery notes
 ```
+
+## Product and engineering documentation
+
+The [AgentDock documentation index](docs/README.md) links the product specification, architecture, implementation plan, roadmap, performance guidance, technical research and design references. Privacy and Terms documents are working drafts, not approved legal notices. The in-app update document is a design specification, not an implemented updater.
