@@ -70,15 +70,19 @@ class AgentDockViewModelTest {
         runCurrent()
 
         val chromeBeforeTyping = viewModel.chromeState.value
+        val workspaceBeforeTyping = viewModel.uiState.value
         viewModel.updateDraft(tab.id, "  First line  \nSecond line")
         runCurrent()
 
         assertEquals(chromeBeforeTyping, viewModel.chromeState.value)
+        assertEquals(workspaceBeforeTyping, viewModel.uiState.value)
         assertEquals("  First line  \nSecond line", viewModel.activeTab.value?.draft)
         assertEquals("", viewModel.uiState.value.tabs.single().title)
+        assertEquals("", viewModel.uiState.value.tabs.single().draft)
 
         viewModel.saveDraft()
         runCurrent()
+        assertEquals("  First line  \nSecond line", viewModel.uiState.value.tabs.single().draft)
         assertEquals("First line", viewModel.uiState.value.tabs.single().title)
 
         viewModel.renameTab(tab.id, "  My   custom title  ")
@@ -86,11 +90,13 @@ class AgentDockViewModelTest {
 
         viewModel.updateDraft(tab.id, "A different task")
         assertEquals("My custom title", viewModel.uiState.value.tabs.single().title)
-        assertEquals("A different task", viewModel.uiState.value.tabs.single().draft)
+        assertEquals("First line", viewModel.uiState.value.tabs.single().draft)
+        assertEquals("A different task", viewModel.activeTab.value?.draft)
 
         viewModel.renameTab(tab.id, "")
         viewModel.updateDraft(tab.id, "Automatically named again")
         assertEquals("", viewModel.uiState.value.tabs.single().title)
+        assertEquals("A different task", viewModel.uiState.value.tabs.single().draft)
         viewModel.saveDraft()
         runCurrent()
         assertEquals("Automatically named again", viewModel.uiState.value.tabs.single().title)
