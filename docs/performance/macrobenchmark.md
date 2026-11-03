@@ -12,6 +12,8 @@ Build the target and instrumentation APKs:
 ./gradlew :app:assembleBenchmark :macrobenchmark:assembleBenchmark
 ```
 
+The app and test module must both use the `benchmark` build variant. The app variant is non-debuggable, minified, signed with the local debug key, and marked `profileable`.
+
 ## Run on a physical Android device
 
 Connect an Android device with USB debugging enabled, unlock it, keep it cool, and avoid running other heavy workloads during the measurement.
@@ -20,7 +22,7 @@ Connect an Android device with USB debugging enabled, unlock it, keep it cool, a
 ./gradlew :macrobenchmark:connectedBenchmarkAndroidTest
 ```
 
-Do not use an emulator for performance conclusions. Macrobenchmark can reject emulator or low-battery measurements because they do not represent stable end-user device performance.
+Run this command with a connected physical Android device. Do not run the Macrobenchmark suite from the generic emulator UI-test task: CI intentionally invokes only `:app:connectedDebugAndroidTest` so benchmark tests are never executed against a debuggable app variant on an emulator. Macrobenchmark can reject emulator or low-battery measurements because they do not represent stable end-user device performance.
 
 ## Results
 
