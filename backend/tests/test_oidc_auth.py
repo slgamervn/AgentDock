@@ -60,7 +60,7 @@ def make_token(signing_key, **overrides: Any) -> str:
         claims,
         signing_key,
         algorithm="RS256",
-        headers={"kid": "test-key-1"},
+        headers={"kid": "test-key-1", "typ": "at+jwt"},
     )
 
 
@@ -126,6 +126,31 @@ def test_oversized_bearer_token_is_rejected(signing_key, oidc_settings) -> None:
     assert response.status_code == 401
 
 
+@pytest.mark.parametrize("token_type", [None, "JWT", "application/jwt"])
+def test_non_access_token_type_is_rejected(signing_key, oidc_settings, token_type) -> None:
+    headers = {"kid": "test-key-1"}
+    if token_type is not None:
+        headers["typ"] = token_type
+    token = jwt.encode(
+        {
+            "iss": ISSUER,
+            "sub": "provider-user-123",
+            "aud": AUDIENCE,
+            "iat": 1_700_000_000,
+            "exp": 1_900_000_600,
+        },
+        signing_key,
+        algorithm="RS256",
+        headers=headers,
+    )
+    with build_client(oidc_settings, signing_key) as client:
+        response = client.get(
+            "/api/v1/auth/identity",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert response.status_code == 401
+
+
 def test_unsupported_algorithm_is_rejected_before_key_lookup(oidc_settings) -> None:
     token = jwt.encode(
         {
@@ -137,7 +162,7 @@ def test_unsupported_algorithm_is_rejected_before_key_lookup(oidc_settings) -> N
         },
         "not-a-real-provider-secret",
         algorithm="HS256",
-        headers={"kid": "test-key-1"},
+        headers={"kid": "test-key-1", "typ": "at+jwt"},
     )
     client = TestClient(create_app(oidc_settings))
     response = client.get(

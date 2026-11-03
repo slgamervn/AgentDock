@@ -51,6 +51,13 @@ def _verify_access_token_sync(
 
     try:
         header = jwt.get_unverified_header(token)
+        token_type = header.get("typ")
+        if not isinstance(token_type, str) or token_type.lower() not in {
+            "at+jwt",
+            "application/at+jwt",
+        }:
+            raise InvalidOIDCToken("JWT is not a supported OAuth access-token type")
+
         algorithm = header.get("alg")
         key_id = header.get("kid")
         if not isinstance(algorithm, str) or algorithm not in settings.oidc_allowed_algorithms:
