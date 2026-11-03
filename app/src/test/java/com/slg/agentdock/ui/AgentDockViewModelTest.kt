@@ -164,6 +164,7 @@ class AgentDockViewModelTest {
         runCurrent()
         assertEquals(1, repository.savedSnapshots.size)
         assertEquals("Final value", repository.savedSnapshots.single().tabs.single().draft)
+        assertEquals("Final value", repository.savedSnapshots.single().tabs.single().title)
     }
 
     @Test
