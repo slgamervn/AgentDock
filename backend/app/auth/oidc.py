@@ -35,7 +35,7 @@ def create_jwks_client(settings: Settings) -> jwt.PyJWKClient | None:
         cache_jwk_set=True,
         lifespan=300,
         timeout=settings.oidc_jwks_timeout_seconds,
-        cooldown_duration=0,
+        cooldown_duration=30,
     )
 
 
@@ -46,6 +46,8 @@ def _verify_access_token_sync(
 ) -> VerifiedIdentity:
     if not settings.oidc_enabled:
         raise InvalidOIDCToken("OIDC is not configured")
+    if not token or len(token) > 16_384:
+        raise InvalidOIDCToken("Bearer token size is invalid")
 
     try:
         header = jwt.get_unverified_header(token)

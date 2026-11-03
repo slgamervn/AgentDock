@@ -117,6 +117,15 @@ def test_invalid_claims_are_rejected(signing_key, oidc_settings, overrides) -> N
     assert response.json() == {"detail": "Invalid or missing bearer token."}
 
 
+def test_oversized_bearer_token_is_rejected(signing_key, oidc_settings) -> None:
+    with build_client(oidc_settings, signing_key) as client:
+        response = client.get(
+            "/api/v1/auth/identity",
+            headers={"Authorization": "Bearer " + ("a" * 16_385)},
+        )
+    assert response.status_code == 401
+
+
 def test_unsupported_algorithm_is_rejected_before_key_lookup(oidc_settings) -> None:
     token = jwt.encode(
         {
@@ -189,4 +198,22 @@ def test_authorized_party_is_checked_when_configured(signing_key, oidc_settings)
             headers={"Authorization": f"Bearer {token}"},
         )
 
+    assert response.status_code == 401
+
+
+def test_signing_key_algorithm_must_match_token_header(signing_key, oidc_settings) -> None:
+    class MismatchedAlgorithmClient:
+        def get_signing_key_from_jwt(self, token: str):
+            return SimpleNamespace(
+                key=signing_key.public_key(),
+                algorithm_name="ES256",
+            )
+
+    app = create_app(oidc_settings)
+    app.state.oidc_jwks_client = MismatchedAlgorithmClient()
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/v1/auth/identity",
+            headers={"Authorization": f"Bearer {make_token(signing_key)}"},
+        )
     assert response.status_code == 401
