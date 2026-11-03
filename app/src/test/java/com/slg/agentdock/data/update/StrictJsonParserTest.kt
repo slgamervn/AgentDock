@@ -42,6 +42,22 @@ class StrictJsonParserTest {
     }
 
     @Test
+    fun acceptsMaximumSupportedNestingDepth() {
+        val depth = 32
+        val nested = "[".repeat(depth) + "0" + "]".repeat(depth)
+        StrictJsonParser.parse(nested, maxChars = nested.length)
+    }
+
+    @Test
+    fun rejectsNestingBeyondMaximumDepth() {
+        val depth = 33
+        val nested = "[".repeat(depth) + "0" + "]".repeat(depth)
+        assertThrows(IllegalArgumentException::class.java) {
+            StrictJsonParser.parse(nested, maxChars = nested.length)
+        }
+    }
+
+    @Test
     fun rejectsNegativeSizeLimit() {
         assertThrows(IllegalArgumentException::class.java) {
             StrictJsonParser.parse("{}", maxChars = -1)

@@ -11,6 +11,8 @@ internal sealed interface JsonValue {
 }
 
 internal object StrictJsonParser {
+    private const val MAX_NESTING_DEPTH = 32
+
     fun parse(input: String, maxChars: Int): JsonValue {
         require(maxChars >= 0) { "JSON size limit must not be negative" }
         require(input.length <= maxChars) { "JSON exceeds the size limit" }
@@ -23,6 +25,7 @@ internal object StrictJsonParser {
 
     private class Parser(private val input: String) {
         private var index = 0
+        private var nestingDepth = 0
 
         fun parseValue(): JsonValue {
             skipWhitespace()
@@ -47,20 +50,25 @@ internal object StrictJsonParser {
         fun atEnd(): Boolean = index == input.length
 
         private fun parseObject(): JsonValue.Object {
-            index++
-            val fields = linkedMapOf<String, JsonValue>()
-            skipWhitespace()
-            if (consume('}')) return JsonValue.Object(fields)
-            while (true) {
-                skipWhitespace()
-                require(!atEnd() && input[index] == '"') { "Object key must be a string" }
-                val key = parseString()
-                val value = parseMemberValue()
-                require(!fields.containsKey(key)) { "Duplicate JSON key: $key" }
-                fields[key] = value
+            enterContainer()
+            try {
+                index++
+                val fields = linkedMapOf<String, JsonValue>()
                 skipWhitespace()
                 if (consume('}')) return JsonValue.Object(fields)
-                require(consume(',')) { "Expected comma between object fields" }
+                while (true) {
+                    skipWhitespace()
+                    require(!atEnd() && input[index] == '"') { "Object key must be a string" }
+                    val key = parseString()
+                    val value = parseMemberValue()
+                    require(!fields.containsKey(key)) { "Duplicate JSON key: $key" }
+                    fields[key] = value
+                    skipWhitespace()
+                    if (consume('}')) return JsonValue.Object(fields)
+                    require(consume(',')) { "Expected comma between object fields" }
+                }
+            } finally {
+                nestingDepth--
             }
         }
 
@@ -71,15 +79,27 @@ internal object StrictJsonParser {
         }
 
         private fun parseArray(): JsonValue.Array {
-            index++
-            val values = mutableListOf<JsonValue>()
-            skipWhitespace()
-            if (consume(']')) return JsonValue.Array(values)
-            while (true) {
-                values += parseValue()
+            enterContainer()
+            try {
+                index++
+                val values = mutableListOf<JsonValue>()
                 skipWhitespace()
                 if (consume(']')) return JsonValue.Array(values)
-                require(consume(',')) { "Expected comma between array values" }
+                while (true) {
+                    values += parseValue()
+                    skipWhitespace()
+                    if (consume(']')) return JsonValue.Array(values)
+                    require(consume(',')) { "Expected comma between array values" }
+                }
+            } finally {
+                nestingDepth--
+            }
+        }
+
+        private fun enterContainer() {
+            nestingDepth++
+            require(nestingDepth <= MAX_NESTING_DEPTH) {
+                "JSON nesting exceeds the maximum depth"
             }
         }
 
