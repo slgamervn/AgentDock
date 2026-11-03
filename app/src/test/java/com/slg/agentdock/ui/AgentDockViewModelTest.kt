@@ -103,6 +103,35 @@ class AgentDockViewModelTest {
     }
 
     @Test
+    fun switchingTabsKeepsEachPendingDraftUntilAutosave() = runTest(mainDispatcherRule.dispatcher) {
+        val first = WorkspaceTab(id = "first", draft = "First old")
+        val second = WorkspaceTab(id = "second", draft = "Second old")
+        val repository = FakeWorkspaceRepository(
+            WorkspaceSnapshot(tabs = listOf(first, second), activeTabId = first.id),
+        )
+        val viewModel = AgentDockViewModel(repository)
+        runCurrent()
+
+        viewModel.updateDraft(first.id, "First updated")
+        assertEquals("First updated", viewModel.activeTab.value?.draft)
+
+        viewModel.selectTab(second.id)
+        runCurrent()
+        assertEquals("Second old", viewModel.activeTab.value?.draft)
+
+        viewModel.updateDraft(second.id, "Second updated")
+        viewModel.selectTab(first.id)
+        runCurrent()
+        assertEquals("First updated", viewModel.activeTab.value?.draft)
+
+        advanceTimeBy(300)
+        runCurrent()
+        val savedTabs = repository.savedSnapshots.last().tabs.associateBy { it.id }
+        assertEquals("First updated", savedTabs.getValue(first.id).draft)
+        assertEquals("Second updated", savedTabs.getValue(second.id).draft)
+    }
+
+    @Test
     fun closingAndRestoringActiveTabKeepsAValidSelection() = runTest(mainDispatcherRule.dispatcher) {
         val first = WorkspaceTab(id = "first", title = "First")
         val second = WorkspaceTab(id = "second", title = "Second")
