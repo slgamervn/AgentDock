@@ -13,7 +13,10 @@ import com.slg.agentdock.data.model.WorkspaceSnapshot
 import com.slg.agentdock.data.model.WorkspaceTab
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
@@ -46,11 +49,18 @@ class WorkspaceStore(context: Context) {
                 ),
             )
         }
+        // Parsing stored JSON can become noticeable when several drafts are large.
+        .flowOn(Dispatchers.Default)
 
     suspend fun save(snapshot: WorkspaceSnapshot) {
+        // Serialize drafts away from the UI dispatcher before the DataStore transaction.
+        val encodedTabs = withContext(Dispatchers.Default) { encodeTabs(snapshot.tabs) }
+        val encodedClosedTabs = withContext(Dispatchers.Default) {
+            encodeTabs(snapshot.closedTabs.take(MAX_CLOSED_TABS))
+        }
         store.edit { preferences ->
-            preferences[TABS_KEY] = encodeTabs(snapshot.tabs)
-            preferences[CLOSED_TABS_KEY] = encodeTabs(snapshot.closedTabs.take(MAX_CLOSED_TABS))
+            preferences[TABS_KEY] = encodedTabs
+            preferences[CLOSED_TABS_KEY] = encodedClosedTabs
             preferences[ACTIVE_TAB_KEY] = snapshot.activeTabId
             preferences[SERVER_URL_KEY] = snapshot.serverUrl
             preferences[THEME_MODE_KEY] = snapshot.preferences.themeMode.validatedTheme()
