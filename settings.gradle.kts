@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "AgentDock"
-include(":app")
+include(":app", ":macrobenchmark")
