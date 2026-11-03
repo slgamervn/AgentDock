@@ -238,7 +238,6 @@ class AgentDockViewModel(
     private fun commitPendingDraftMetadata() {
         val pendingDrafts = _draftEdits.value
         if (pendingDrafts.isEmpty()) return
-        _draftEdits.value = emptyMap()
         val savedAt = System.currentTimeMillis()
         _uiState.update { state ->
             val updatedTabs = state.tabs.map { tab ->
@@ -256,6 +255,9 @@ class AgentDockViewModel(
             }
             state.copy(tabs = updatedTabs)
         }
+        // Publish the committed snapshot before clearing the overlay so the
+        // editor never briefly receives the previous draft value.
+        _draftEdits.value = emptyMap()
     }
 
     private suspend fun persistCurrentState() {
