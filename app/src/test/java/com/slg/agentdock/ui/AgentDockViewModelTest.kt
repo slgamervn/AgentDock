@@ -130,6 +130,28 @@ class AgentDockViewModelTest {
     }
 
     @Test
+    fun closingTabCommitsAnUnsavedDraftBeforeMovingItToClosedHistory() = runTest(mainDispatcherRule.dispatcher) {
+        val tab = WorkspaceTab(id = "tab-to-close")
+        val repository = FakeWorkspaceRepository(
+            WorkspaceSnapshot(tabs = listOf(tab), activeTabId = tab.id),
+        )
+        val viewModel = AgentDockViewModel(repository)
+        runCurrent()
+
+        viewModel.updateDraft(tab.id, "Draft that must survive closing")
+        viewModel.closeTab(tab.id)
+
+        val state = viewModel.uiState.value
+        assertEquals("Draft that must survive closing", state.closedTabs.single().draft)
+        assertEquals("Draft that must survive closing", state.closedTabs.single().title)
+        assertNotEquals(tab.id, state.activeTabId)
+
+        advanceTimeBy(300)
+        runCurrent()
+        assertEquals("Draft that must survive closing", repository.savedSnapshots.last().closedTabs.single().draft)
+    }
+
+    @Test
     fun closingLastTabCreatesANewActiveTab() = runTest(mainDispatcherRule.dispatcher) {
         val onlyTab = WorkspaceTab(id = "only-tab")
         val repository = FakeWorkspaceRepository(
