@@ -5,7 +5,6 @@ from typing import Protocol
 import jwt
 from fastapi.concurrency import run_in_threadpool
 from jwt.exceptions import (
-    InvalidTokenError,
     PyJWKClientConnectionError,
     PyJWKClientError,
     PyJWTError,

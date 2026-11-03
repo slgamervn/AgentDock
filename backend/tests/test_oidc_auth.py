@@ -7,7 +7,7 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
-from jwt.exceptions import PyJWKClientConnectionError, PyJWKClientError
+from jwt.exceptions import PyJWKClientConnectionError
 from pydantic import ValidationError
 
 from app.core.config import Settings
@@ -50,7 +50,7 @@ def make_token(signing_key, **overrides: Any) -> str:
         "iss": ISSUER,
         "sub": "provider-user-123",
         "aud": AUDIENCE,
-        "iat": 1_900_000_000,
+        "iat": 1_700_000_000,
         "exp": 1_900_000_600,
         "email": "private@example.test",
         "roles": ["should-not-be-returned"],
