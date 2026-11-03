@@ -2,7 +2,7 @@ package com.slg.agentdock.macrobenchmark
 
 import android.view.KeyEvent
 import androidx.benchmark.macro.FrameTimingMetric
-import androidx.benchmark.macro.MacrobenchmarkRule
+import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
