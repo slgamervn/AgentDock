@@ -4,6 +4,7 @@ import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.MacrobenchmarkRule
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.LargeTest
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
@@ -17,6 +18,7 @@ import org.junit.runner.RunWith
  * Run on a physical Android device. Emulator frame timings are not representative
  * of the performance users experience on their phones.
  */
+@LargeTest
 @RunWith(AndroidJUnit4::class)
 class DraftTypingFrameTimingBenchmark {
     @get:Rule
@@ -54,10 +56,10 @@ class DraftTypingFrameTimingBenchmark {
         const val DRAFT_FIELD_RESOURCE_ID = "home.taskInput"
         const val UI_TIMEOUT_MS = 5_000L
         const val ITERATIONS = 5
-        val LONG_DRAFT =
+        val LONG_DRAFT = (
             "Review the project structure, identify the main implementation risks, " +
                 "prepare a concise plan, validate the changes, and summarize the test results. " +
                 "Preserve existing behavior and keep the workspace responsive while editing. "
-                    .repeat(4)
+            ).repeat(4)
     }
 }
