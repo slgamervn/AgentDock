@@ -22,12 +22,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.slg.agentdock.BuildConfig
 import com.slg.agentdock.R
 import com.slg.agentdock.ui.components.AppHeader
 import com.slg.agentdock.ui.components.MainNavigationBar
@@ -124,6 +127,13 @@ private fun AgentDockAppContent(
     ) { innerPadding ->
         Column(
             modifier = Modifier
+                .then(
+                    if (BuildConfig.BUILD_TYPE == "benchmark") {
+                        Modifier.semantics { testTagsAsResourceId = true }
+                    } else {
+                        Modifier
+                    },
+                )
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background),
