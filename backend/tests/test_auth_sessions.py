@@ -93,7 +93,7 @@ def test_identity_provisioning_rotating_refresh_and_logout() -> None:
             second = second_response.json()
             assert second["user_id"] == first["user_id"]
             assert second["tenant_id"] == first["tenant_id"]
-            assert second["session_expires_at"] == first["session_expires_at"]
+            assert second["session_id"] != first["session_id"]
 
             account_response = client.get(
                 "/api/v1/auth/me",
