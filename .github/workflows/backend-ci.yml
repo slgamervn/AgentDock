@@ -92,7 +92,7 @@ jobs:
           PGPASSWORD: ci-migrator-password
         run: |
           psql -h 127.0.0.1 -U agentdock_migrator -d agentdock -v ON_ERROR_STOP=1 <<'SQL'
-          GRANT INSERT ON TABLE tenants TO agentdock_runtime;
+          GRANT SELECT, INSERT ON TABLE tenants TO agentdock_runtime;
           GRANT SELECT, INSERT ON TABLE users TO agentdock_runtime;
           GRANT SELECT, INSERT, UPDATE
             ON TABLE auth_identities, user_sessions, session_tokens
