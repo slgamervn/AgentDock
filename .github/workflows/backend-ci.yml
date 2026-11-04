@@ -2,7 +2,7 @@ name: Backend CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, test]
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
@@ -10,7 +10,7 @@ on:
       - "docs/ARCHITECTURE.md"
       - "docs/ROADMAP.md"
   pull_request:
-    branches: [main, feature/backend-readiness]
+    branches: [main, test]
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
