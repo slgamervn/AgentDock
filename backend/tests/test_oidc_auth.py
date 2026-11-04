@@ -215,7 +215,7 @@ def test_unsupported_algorithm_is_rejected_before_key_lookup(oidc_settings) -> N
             "iat": 1_900_000_000,
             "exp": 1_900_000_600,
         },
-        "not-a-real-provider-secret",
+        "not-a-real-provider-secret-key-with-32-bytes-minimum",
         algorithm="HS256",
         headers={"kid": "test-key-1", "typ": "at+jwt"},
     )
