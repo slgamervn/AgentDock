@@ -140,8 +140,5 @@ async def logout_session(
     principal: Annotated[SessionPrincipal, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_database_session)],
 ) -> Response:
-    # Authentication performs a read transaction. End it before starting the
-    # independent revocation transaction on the shared request-scoped session.
-    await db.rollback()
     await revoke_auth_session(db, principal)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
