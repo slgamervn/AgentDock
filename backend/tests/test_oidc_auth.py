@@ -41,6 +41,7 @@ def oidc_settings() -> Settings:
         oidc_audience=AUDIENCE,
         oidc_jwks_url="https://identity.example.test/.well-known/jwks.json",
         oidc_allowed_algorithms=["RS256"],
+        oidc_allowed_client_ids=["agentdock-android"],
         oidc_clock_skew_seconds=0,
     )
 
@@ -125,6 +126,7 @@ def test_missing_bearer_token_is_rejected(oidc_settings, signing_key) -> None:
         {"sub": ""},
         {"exp": 1_700_000_000},
         {"client_id": ""},
+        {"client_id": "unregistered-client"},
         {"jti": ""},
     ],
 )
@@ -213,7 +215,7 @@ def test_unsupported_algorithm_is_rejected_before_key_lookup(oidc_settings) -> N
             "iat": 1_900_000_000,
             "exp": 1_900_000_600,
         },
-        "not-a-real-provider-secret",
+        "not-a-real-provider-secret-key-with-32-bytes-minimum",
         algorithm="HS256",
         headers={"kid": "test-key-1", "typ": "at+jwt"},
     )
@@ -255,6 +257,16 @@ def test_missing_oidc_configuration_fails_closed() -> None:
 def test_partial_oidc_configuration_is_rejected() -> None:
     with pytest.raises(ValidationError):
         Settings(environment="test", oidc_issuer=ISSUER)
+
+
+def test_oidc_requires_an_explicit_client_allowlist() -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            environment="test",
+            oidc_issuer=ISSUER,
+            oidc_audience=AUDIENCE,
+            oidc_jwks_url="https://identity.example.test/jwks.json",
+        )
 
 
 def test_oidc_urls_require_https() -> None:

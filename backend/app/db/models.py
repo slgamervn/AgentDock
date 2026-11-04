@@ -27,7 +27,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
-    email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True)
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True, unique=True)
     display_name: Mapped[str | None] = mapped_column(String(120))
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("true")
@@ -35,6 +35,80 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class AuthIdentity(Base):
+    """Stable mapping from a verified external issuer/subject pair to one AgentDock account."""
+
+    __tablename__ = "auth_identities"
+    __table_args__ = (
+        UniqueConstraint("issuer", "subject", name="uq_auth_identities_issuer_subject"),
+        Index("ix_auth_identities_user_id", "user_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    issuer: Mapped[str] = mapped_column(String(512), nullable=False)
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    default_tenant_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    last_authenticated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class UserSession(Base):
+    """One revocable AgentDock login session bound to a user and workspace."""
+
+    __tablename__ = "user_sessions"
+    __table_args__ = (
+        Index("ix_user_sessions_user_created", "user_id", "created_at"),
+        Index("ix_user_sessions_expires_at", "expires_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    tenant_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SessionToken(Base):
+    """Only one-way token hashes are stored; used refresh tokens remain for replay detection."""
+
+    __tablename__ = "session_tokens"
+    __table_args__ = (
+        CheckConstraint("token_type IN ('ACCESS', 'REFRESH')", name="ck_session_tokens_type"),
+        UniqueConstraint("token_hash", name="uq_session_tokens_hash"),
+        Index("ix_session_tokens_session_type", "session_id", "token_type"),
+        Index("ix_session_tokens_expires_at", "expires_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("user_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    token_type: Mapped[str] = mapped_column(String(8), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class TenantMembership(Base):
