@@ -67,6 +67,20 @@ async def _cleanup_identity(subject: str) -> None:
                 )
             ).first()
             if mapped is not None:
+                # Remove rows with RESTRICT membership references before the
+                # workspace cascades; tenant deletion then removes memberships.
+                await connection.execute(
+                    text("DELETE FROM idempotency_records WHERE tenant_id = :tenant_id"),
+                    {"tenant_id": mapped.default_tenant_id},
+                )
+                await connection.execute(
+                    text("DELETE FROM tasks WHERE tenant_id = :tenant_id"),
+                    {"tenant_id": mapped.default_tenant_id},
+                )
+                await connection.execute(
+                    text("DELETE FROM tenant_memberships WHERE tenant_id = :tenant_id"),
+                    {"tenant_id": mapped.default_tenant_id},
+                )
                 await connection.execute(
                     text("DELETE FROM tenants WHERE id = :tenant_id"),
                     {"tenant_id": mapped.default_tenant_id},
