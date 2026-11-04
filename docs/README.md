@@ -15,6 +15,8 @@ This directory separates **verified implementation state**, **approved product d
 
 ## Operational and trust documents
 
+- [Authentication and session contract](AUTHENTICATION.md) — provider-neutral backend identity mapping and revocable session design; check active branch and CI state for implementation validation.
+
 - [Device performance](DEVICE_PERFORMANCE.md) — adaptive behavior and benchmark acceptance.
 - [Privacy policy](PRIVACY_POLICY.md) — **draft, not approved for publication**.
 - [Terms of service](TERMS_OF_SERVICE.md) — **draft, not approved for publication**.

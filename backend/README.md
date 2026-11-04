@@ -11,12 +11,14 @@ FastAPI control-plane bootstrap with the first PostgreSQL persistence boundary.
 - Runtime configuration uses the `AGENTDOCK_` prefix; database URLs use `SecretStr` in application settings.
 - SQLAlchemy async engine/session helpers and Alembic migrations.
 - Initial records: tenants, users, tenant memberships, tasks, ordered task events and idempotency records.
+- Verified external identities are mapped by the exact `(issuer, subject)` pair. First sign-in provisions a minimal account and personal workspace without trusting or linking by email.
+- AgentDock sessions use opaque random access/refresh tokens. Only SHA-256 token hashes are stored; refresh tokens rotate and replay revokes the full session family. Access tokens are short-lived and checked against PostgreSQL so logout revocation takes effect immediately.
 - PostgreSQL row-level security (RLS) is enabled and forced on every tenant-owned table.
 - Docker runs as UID/GID 10001, not root.
 
 The API now has an optional OIDC JWT access-token verification boundary. When configured, `GET /api/v1/auth/identity` checks the RFC 9068 access-token type (`at+jwt` or `application/at+jwt`), signature against the configured HTTPS JWKS endpoint, a fixed allowlist of asymmetric algorithms, issuer, API audience and the RFC 9068 required claims (`iss`, `sub`, `aud`, `exp`, `iat`, `client_id`, `jti`); it returns only issuer, subject and expiry. Missing or non-access-token `typ` values are rejected; do not send OIDC ID tokens. A provider-specific non-RFC 9068 token format requires a separately reviewed adapter. JWKS retrieval runs off the event loop, is cached, and has a bounded timeout. Invalid tokens return 401; temporary JWKS connection failures return a generic 503.
 
-This is **not a complete sign-in or account system**. Android's Authorization Code + PKCE flow, provider-specific token contract, identity-to-user mapping, first-user/workspace provisioning, internal session issuance/rotation/revocation, tenant membership authorization, task CRUD, workers and Agent execution are still not implemented. Do not protect production task routes with this verifier alone until the provider's access-token contract and server-side user/session authorization are integrated and tested. The API constructs an async engine during application startup but does not open a database connection until the readiness check or a database operation. `/health/live` does not assert database readiness.
+This is the backend identity/session foundation, not a complete client sign-in experience. Android's Authorization Code + PKCE flow, provider-specific setup and token-contract verification, tenant switching/membership APIs, task CRUD, workers and Agent execution remain separate work. The internal session endpoints require a trusted, configured OIDC issuer and the new database migration/runtime grants before use. Do not protect task routes until every task operation performs server-side membership authorization and sets tenant RLS context. The API constructs an async engine during application startup but does not open a database connection until a database operation. `/health/live` does not assert database readiness.
 
 ## Database roles and tenant isolation
 
@@ -49,7 +51,10 @@ python -m alembic upgrade head
 Then, as the migration role or database administrator, grant only the required runtime access:
 
 ```sql
-GRANT SELECT ON TABLE tenants, users TO agentdock_runtime;
+GRANT SELECT, INSERT ON TABLE tenants, users TO agentdock_runtime;
+GRANT SELECT, INSERT, UPDATE
+  ON TABLE auth_identities, user_sessions, session_tokens
+  TO agentdock_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE
   ON TABLE tenant_memberships, tasks, task_events, idempotency_records
   TO agentdock_runtime;
@@ -71,12 +76,12 @@ API liveness: http://127.0.0.1:8000/api/v1/health/live. Database readiness: http
 
 ## Tests
 
-Run `python -m compileall -q app migrations tests`, then `python -m pytest -q`. PostgreSQL isolation tests require `AGENTDOCK_TEST_ADMIN_DATABASE_URL` and `AGENTDOCK_TEST_DATABASE_URL`; they verify a real non-owner, non-superuser runtime role, forced RLS, transaction-local tenant scope, cross-tenant read isolation and rejected cross-tenant writes. Those tests are always enabled in GitHub Actions.
+Run `python -m compileall -q app migrations tests`, then `python -m pytest -q`. The PostgreSQL integration suite covers migration/schema permissions, forced tenant RLS, identity-to-account provisioning, workspace ownership, opaque token hashing, session refresh rotation, replay revocation and logout. PostgreSQL tests require `AGENTDOCK_TEST_ADMIN_DATABASE_URL` and `AGENTDOCK_TEST_DATABASE_URL`; they are always configured in GitHub Actions. Run the suite with the restricted runtime role for application operations and the admin role only for test setup/assertions.
 
 Copy `.env.example` for local configuration. Never commit real `.env` files, credentials or signing material.
 
 ## Optional OIDC access-token verification
 
-Set `AGENTDOCK_OIDC_ISSUER`, `AGENTDOCK_OIDC_AUDIENCE` and `AGENTDOCK_OIDC_JWKS_URL` together. The issuer and JWKS URLs must use HTTPS and must be provisioned by the operator, never supplied by a request. The audience identifies the AgentDock API/resource server. The default algorithm allowlist is RS256; optional algorithms must remain asymmetric and explicitly allowlisted. The configured JWKS client caches keys and uses a bounded network timeout.
+Set `AGENTDOCK_OIDC_ISSUER`, `AGENTDOCK_OIDC_AUDIENCE`, `AGENTDOCK_OIDC_JWKS_URL` and `AGENTDOCK_OIDC_ALLOWED_CLIENT_IDS` together. The allowed client IDs are a JSON array of explicitly registered OAuth clients; tokens from other clients are rejected even when their audience matches. The issuer and JWKS URLs must use HTTPS and must be provisioned by the operator, never supplied by a request. The audience identifies the AgentDock API/resource server. The default algorithm allowlist is RS256; optional algorithms must remain asymmetric and explicitly allowlisted. The configured JWKS client caches keys and uses a bounded network timeout.
 
-The protected `GET /api/v1/auth/identity` endpoint is a verification probe and a reference for future protected routes. It does not create an AgentDock user or session. The API currently does not map `(issuer, subject)` to a user, rotate/revoke application sessions, create workspaces, or verify tenant membership. Keep task routes unavailable until those authorization layers are implemented. Never send an ID token to this endpoint; configure and validate the identity provider's access-token contract for the AgentDock API audience.
+The `GET /api/v1/auth/identity` endpoint remains a verification probe. `POST /api/v1/auth/session` exchanges a verified external access token for an AgentDock session: the backend maps `(issuer, subject)` to an internal account, provisions a personal workspace on first sign-in, and issues short-lived opaque access tokens plus rotating refresh tokens. Only SHA-256 token hashes are stored; replay of a rotated refresh token revokes the session family. `GET /api/v1/auth/me` reads the current internal session and `POST /api/v1/auth/session/logout` revokes it. Android Authorization Code + PKCE and provider-specific setup remain separate work. Never send an ID token; configure and validate the identity provider's access-token contract for the AgentDock API audience.

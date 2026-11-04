@@ -7,7 +7,7 @@ AgentDock is a native Kotlin/Jetpack Compose app. The interface defaults to Viet
 
 **Autonomous Agent Control Center** — ứng dụng Android để giao việc, theo dõi tiến trình và phê duyệt hành động của các AI Agent.
 
-> Trạng thái hiện tại: Android foundation 0.1.0 và backend 0.2.0 database foundation. Backend đã có schema PostgreSQL, Alembic migration và kiểm soát cách ly tenant bằng RLS; chưa có đăng nhập, API tạo tác vụ từ xa hay Agent thực thi. Android vẫn lưu bản nháp cục bộ.
+> Trạng thái hiện tại: Android 0.1.0 vẫn mới có workspace và lưu bản nháp cục bộ. Backend 0.2.0 trên `main` hiện có database foundation và OIDC token-verification boundary. Nhánh feature `feature/auth-session-foundation` đang bổ sung account mapping và revocable sessions; chưa có Android PKCE sign-in, remote task API hoặc Agent runtime.
 
 ## Nguyên tắc sản phẩm
 
@@ -47,7 +47,7 @@ Runner CI được cố định ở Ubuntu 24.04. APK debug được lưu thành
 - PostgreSQL RLS được bật và FORCE trên toàn bộ bảng tenant-scoped; runtime role tách khỏi migration role và không có `BYPASSRLS`.
 - Trong transaction, backend đặt tenant ID do client chọn làm phạm vi ứng viên bằng transaction-local setting, sau đó truy vấn membership của user đã xác thực dưới RLS trước khi đọc/ghi dữ liệu tenant. Không có membership thì rollback và từ chối; tenant ID tự nó không cấp quyền.
 - Backend CI chạy migration và kiểm tra RLS trên PostgreSQL thật, đồng thời chạy pytest và build Docker image.
-- `GET /api/v1/health/live` chỉ xác nhận process đang hoạt động; `/api/v1/health/ready` chạy `SELECT 1` trên database runtime và trả 503 nếu chưa cấu hình hoặc database không truy cập được. Engine được khởi tạo/giải phóng theo FastAPI lifespan; thời gian kết nối và chờ connection được giới hạn. Authentication, remote task API và Agent runtime chưa được triển khai.
+- `GET /api/v1/health/live` chỉ xác nhận process đang hoạt động; `/api/v1/health/ready` chạy `SELECT 1` trên database runtime và trả 503 nếu chưa cấu hình hoặc database không truy cập được. Engine được khởi tạo/giải phóng theo FastAPI lifespan; thời gian kết nối và chờ connection được giới hạn. Nhánh feature hiện đang bổ sung backend OIDC identity/session (cần CI và review trước khi tích hợp vào `test`); Android PKCE login, remote task API và Agent runtime vẫn chưa được triển khai.
 
 ## Ký APK release
 
