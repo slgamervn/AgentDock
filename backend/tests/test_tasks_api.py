@@ -515,3 +515,55 @@ def test_running_task_cannot_be_paused_or_cancelled_without_worker_support(
     )
     assert events.status_code == 200
     assert [item["sequence"] for item in events.json()["items"]] == [1]
+
+
+def test_concurrent_pause_requests_append_only_one_lifecycle_event(signed_in_client) -> None:
+    first_client = signed_in_client["client"]
+    second_app = create_app(signed_in_client["settings"])
+
+    created = first_client.post(
+        "/api/v1/tasks",
+        headers={
+            **signed_in_client["headers"],
+            "Idempotency-Key": f"pause-race-{uuid4().hex}",
+        },
+        json={
+            "title": "Concurrent pause",
+            "prompt": "Two callers attempt to pause the same queued task.",
+        },
+    )
+    assert created.status_code == 201, created.text
+    task_id = created.json()["id"]
+
+    with TestClient(second_app) as second_client:
+        def pause_first():
+            return first_client.post(
+                f"/api/v1/tasks/{task_id}/pause",
+                headers=signed_in_client["headers"],
+            )
+
+        def pause_second():
+            return second_client.post(
+                f"/api/v1/tasks/{task_id}/pause",
+                headers=signed_in_client["headers"],
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            first_future = executor.submit(pause_first)
+            second_future = executor.submit(pause_second)
+            responses = [first_future.result(), second_future.result()]
+
+    assert [response.status_code for response in responses] == [200, 200]
+    assert all(response.json()["status"] == "PAUSED" for response in responses)
+
+    events = first_client.get(
+        f"/api/v1/tasks/{task_id}/events",
+        headers=signed_in_client["headers"],
+    )
+    assert events.status_code == 200
+    items = events.json()["items"]
+    assert [item["sequence"] for item in items] == [1, 2]
+    assert [item["event_type"] for item in items] == [
+        "TASK_CREATED",
+        "TASK_PAUSED",
+    ]
