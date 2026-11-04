@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     oidc_allowed_algorithms: list[OIDCAlgorithm] = Field(default_factory=lambda: ["RS256"])
     oidc_clock_skew_seconds: int = Field(default=30, ge=0, le=120)
     oidc_jwks_timeout_seconds: int = Field(default=5, ge=1, le=10)
+    session_access_token_minutes: int = Field(default=15, ge=5, le=60)
+    session_max_lifetime_days: int = Field(default=30, ge=1, le=90)
 
     @property
     def oidc_enabled(self) -> bool:
