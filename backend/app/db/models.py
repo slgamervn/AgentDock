@@ -151,6 +151,7 @@ class Task(Base):
             name="ck_tasks_status",
         ),
         Index("ix_tasks_tenant_status_created", "tenant_id", "status", "created_at"),
+        Index("ix_tasks_tenant_created_id", "tenant_id", "created_at", "id"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
