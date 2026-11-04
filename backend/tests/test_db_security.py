@@ -55,7 +55,9 @@ def test_runtime_role_is_restricted_and_tenant_tables_force_rls() -> None:
                         text(
                             "SELECT "
                             "has_table_privilege('agentdock_runtime', 'tenants', 'INSERT') AS tenant_insert, "
+                            "has_table_privilege('agentdock_runtime', 'tenants', 'UPDATE') AS tenant_update, "
                             "has_table_privilege('agentdock_runtime', 'users', 'INSERT') AS user_insert, "
+                            "has_table_privilege('agentdock_runtime', 'users', 'UPDATE') AS user_update, "
                             "has_table_privilege('agentdock_runtime', 'auth_identities', 'INSERT') AS identity_insert, "
                             "has_table_privilege('agentdock_runtime', 'user_sessions', 'INSERT') AS session_insert, "
                             "has_table_privilege('agentdock_runtime', 'session_tokens', 'INSERT') AS token_insert, "
@@ -66,7 +68,9 @@ def test_runtime_role_is_restricted_and_tenant_tables_force_rls() -> None:
                     )
                 ).one()
                 assert grants.tenant_insert is True
+                assert grants.tenant_update is False
                 assert grants.user_insert is True
+                assert grants.user_update is False
                 assert grants.identity_insert is True
                 assert grants.session_insert is True
                 assert grants.token_insert is True
