@@ -72,8 +72,6 @@ def test_identity_provisioning_rotating_refresh_and_logout() -> None:
 
     user_id: UUID | None = None
     tenant_id: UUID | None = None
-    admin_engine = create_async_engine(ADMIN_DATABASE_URL, pool_pre_ping=True)
-
     try:
         with TestClient(app) as client:
             first_response = client.post(
@@ -107,48 +105,52 @@ def test_identity_provisioning_rotating_refresh_and_logout() -> None:
             }
 
             async def inspect_first_session() -> None:
-                async with admin_engine.connect() as connection:
-                    hashes = (
-                        await connection.execute(
-                            text(
-                                "SELECT token_hash FROM session_tokens "
-                                "WHERE session_id = :session_id"
-                            ),
-                            {"session_id": first["session_id"]},
-                        )
-                    ).scalars().all()
-                    identity_count = (
-                        await connection.execute(
-                            text(
-                                "SELECT count(*) FROM auth_identities "
-                                "WHERE issuer = :issuer AND subject = :subject"
-                            ),
-                            {"issuer": ISSUER, "subject": subject},
-                        )
-                    ).scalar_one()
-                    membership_count = (
-                        await connection.execute(
-                            text(
-                                "SELECT count(*) FROM tenant_memberships "
-                                "WHERE tenant_id = :tenant_id AND user_id = :user_id"
-                            ),
-                            {"tenant_id": tenant_id, "user_id": user_id},
-                        )
-                    ).scalar_one()
-                    email = (
-                        await connection.execute(
-                            text("SELECT email FROM users WHERE id = :user_id"),
-                            {"user_id": user_id},
-                        )
-                    ).scalar_one()
-                assert len(hashes) == 2
-                assert sha256(first["access_token"].encode("utf-8")).hexdigest() in hashes
-                assert sha256(first["refresh_token"].encode("utf-8")).hexdigest() in hashes
-                assert first["access_token"] not in hashes
-                assert first["refresh_token"] not in hashes
-                assert identity_count == 1
-                assert membership_count == 1
-                assert email is None
+                admin_engine = create_async_engine(ADMIN_DATABASE_URL, pool_pre_ping=True)
+                try:
+                    async with admin_engine.connect() as connection:
+                        hashes = (
+                            await connection.execute(
+                                text(
+                                    "SELECT token_hash FROM session_tokens "
+                                    "WHERE session_id = :session_id"
+                                ),
+                                {"session_id": first["session_id"]},
+                            )
+                        ).scalars().all()
+                        identity_count = (
+                            await connection.execute(
+                                text(
+                                    "SELECT count(*) FROM auth_identities "
+                                    "WHERE issuer = :issuer AND subject = :subject"
+                                ),
+                                {"issuer": ISSUER, "subject": subject},
+                            )
+                        ).scalar_one()
+                        membership_count = (
+                            await connection.execute(
+                                text(
+                                    "SELECT count(*) FROM tenant_memberships "
+                                    "WHERE tenant_id = :tenant_id AND user_id = :user_id"
+                                ),
+                                {"tenant_id": tenant_id, "user_id": user_id},
+                            )
+                        ).scalar_one()
+                        email = (
+                            await connection.execute(
+                                text("SELECT email FROM users WHERE id = :user_id"),
+                                {"user_id": user_id},
+                            )
+                        ).scalar_one()
+                    assert len(hashes) == 2
+                    assert sha256(first["access_token"].encode("utf-8")).hexdigest() in hashes
+                    assert sha256(first["refresh_token"].encode("utf-8")).hexdigest() in hashes
+                    assert first["access_token"] not in hashes
+                    assert first["refresh_token"] not in hashes
+                    assert identity_count == 1
+                    assert membership_count == 1
+                    assert email is None
+                finally:
+                    await admin_engine.dispose()
 
             asyncio.run(inspect_first_session())
 
@@ -197,16 +199,33 @@ def test_identity_provisioning_rotating_refresh_and_logout() -> None:
             )
             assert after_logout.status_code == 401
     finally:
-        if tenant_id is not None and user_id is not None:
-            async def cleanup() -> None:
-                async with admin_engine.begin() as connection:
-                    await connection.execute(
-                        text("DELETE FROM tenants WHERE id = :tenant_id"),
-                        {"tenant_id": tenant_id},
+        async def cleanup() -> None:
+            cleanup_engine = create_async_engine(ADMIN_DATABASE_URL, pool_pre_ping=True)
+            try:
+                async with cleanup_engine.begin() as connection:
+                    mapped = (
+                        await connection.execute(
+                            text(
+                                "SELECT user_id, default_tenant_id FROM auth_identities "
+                                "WHERE issuer = :issuer AND subject = :subject"
+                            ),
+                            {"issuer": ISSUER, "subject": subject},
+                        )
+                    ).first()
+                    resolved_user_id = user_id or (mapped.user_id if mapped else None)
+                    resolved_tenant_id = tenant_id or (
+                        mapped.default_tenant_id if mapped else None
                     )
-                    await connection.execute(
-                        text("DELETE FROM users WHERE id = :user_id"),
-                        {"user_id": user_id},
-                    )
-            asyncio.run(cleanup())
-        asyncio.run(admin_engine.dispose())
+                    if resolved_tenant_id is not None:
+                        await connection.execute(
+                            text("DELETE FROM tenants WHERE id = :tenant_id"),
+                            {"tenant_id": resolved_tenant_id},
+                        )
+                    if resolved_user_id is not None:
+                        await connection.execute(
+                            text("DELETE FROM users WHERE id = :user_id"),
+                            {"user_id": resolved_user_id},
+                        )
+            finally:
+                await cleanup_engine.dispose()
+        asyncio.run(cleanup())
