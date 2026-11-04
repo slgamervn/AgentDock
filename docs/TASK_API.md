@@ -1,6 +1,6 @@
 # AgentDock Task API contract
 
-**Status:** Initial task create/read API is implemented on `feature/durable-task-api`. It is not integrated into `test` or `main` until its PR and post-merge CI pass. The API persists tasks; it does not execute them.
+**Status:** Task persistence and pre-execution lifecycle commands are integrated into `test` after PR #12. This API persists and controls queued tasks; it does not execute them. Promotion to `main` is a separate, validated PR.
 
 ## Authentication and tenant boundary
 
@@ -18,6 +18,9 @@ Task responses use `Cache-Control: no-store` and `Pragma: no-cache` because prom
 | GET | `/api/v1/tasks` | List tasks in the current workspace |
 | GET | `/api/v1/tasks/{task_id}` | Read a task in the current workspace |
 | GET | `/api/v1/tasks/{task_id}/events` | Read ordered events after a sequence |
+| POST | `/api/v1/tasks/{task_id}/pause` | Move a queued task to `PAUSED` |
+| POST | `/api/v1/tasks/{task_id}/resume` | Move a paused task to `QUEUED` |
+| POST | `/api/v1/tasks/{task_id}/cancel` | Cancel a queued or paused task |
 
 ### Create
 
@@ -54,9 +57,20 @@ Send `Idempotency-Key` as a header (8–128 printable ASCII characters) with a J
 - `next_after_sequence` is returned when another page exists. Pass that value as the next `after_sequence`.
 - Event reads do not expose tasks outside the authenticated workspace.
 
+## Pre-execution lifecycle commands
+
+| Command | Allowed source | Result | Event |
+|---|---|---|---|
+| Pause | `QUEUED` | `PAUSED` | `TASK_PAUSED` |
+| Resume | `PAUSED` | `QUEUED` | `TASK_RESUMED` |
+| Cancel | `QUEUED`, `PAUSED` | `CANCELLED` | `TASK_CANCELLED` |
+
+Each command locks the task row, validates the current status, updates the status and appends the next task-local event sequence in one transaction. Repeating a command when the task is already in its target state returns the current task without appending another event. Commands from unsupported states return 409.
+
+A task in `RUNNING` cannot yet be paused or cancelled. That requires a worker command channel and cooperative execution handling; the API does not pretend a database status update can stop active work.
+
 ## Not implemented by this slice
 
-- Pause, resume and cancel commands or lifecycle transition enforcement.
 - Worker lease, heartbeat, execution, retries or recovery.
 - SSE streaming, heartbeat and live reconnect (the event read endpoint is the replay foundation only).
 - Usage quotas, per-user rate limits and retention cleanup jobs.
