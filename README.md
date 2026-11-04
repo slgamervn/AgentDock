@@ -47,7 +47,7 @@ Runner CI được cố định ở Ubuntu 24.04. APK debug được lưu thành
 - PostgreSQL RLS được bật và FORCE trên toàn bộ bảng tenant-scoped; runtime role tách khỏi migration role và không có `BYPASSRLS`.
 - Trong transaction, backend đặt tenant ID do client chọn làm phạm vi ứng viên bằng transaction-local setting, sau đó truy vấn membership của user đã xác thực dưới RLS trước khi đọc/ghi dữ liệu tenant. Không có membership thì rollback và từ chối; tenant ID tự nó không cấp quyền.
 - Backend CI chạy migration và kiểm tra RLS trên PostgreSQL thật, đồng thời chạy pytest và build Docker image.
-- `GET /api/v1/health/live` chỉ xác nhận process đang hoạt động; `/api/v1/health/ready` chạy `SELECT 1` trên database runtime và trả 503 nếu chưa cấu hình hoặc database không truy cập được. Engine được khởi tạo/giải phóng theo FastAPI lifespan; thời gian kết nối và chờ connection được giới hạn. Authentication, remote task API và Agent runtime chưa được triển khai.
+- `GET /api/v1/health/live` chỉ xác nhận process đang hoạt động; `/api/v1/health/ready` chạy `SELECT 1` trên database runtime và trả 503 nếu chưa cấu hình hoặc database không truy cập được. Engine được khởi tạo/giải phóng theo FastAPI lifespan; thời gian kết nối và chờ connection được giới hạn. Nhánh feature hiện đang bổ sung backend OIDC identity/session (cần CI và review trước khi tích hợp vào `test`); Android PKCE login, remote task API và Agent runtime vẫn chưa được triển khai.
 
 ## Ký APK release
 
