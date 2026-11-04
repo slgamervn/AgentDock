@@ -65,7 +65,7 @@ Send `Idempotency-Key` as a header (8–128 printable ASCII characters) with a J
 | Resume | `PAUSED` | `QUEUED` | `TASK_RESUMED` |
 | Cancel | `QUEUED`, `PAUSED` | `CANCELLED` | `TASK_CANCELLED` |
 
-Each command locks the task row, validates the current status, updates the status and appends the next task-local event sequence in one transaction. Repeating a command when the task is already in its target state returns the current task without appending another event. Concurrent commands serialize on the row lock; only the first actual transition appends an event. Commands from unsupported states return 409.
+Each command locks the task row, validates the current status, updates the status and appends the next task-local event sequence in one transaction. Repeating a command returns the current task without appending another event only when the latest event proves that the same command already completed. For example, `resume` on a newly created `QUEUED` task is rejected because no prior `TASK_RESUMED` event exists. Concurrent commands serialize on the row lock; only the first actual transition appends an event. Commands from unsupported states return 409.
 
 A task in `RUNNING` cannot yet be paused or cancelled. That requires a worker command channel and cooperative execution handling; the API does not pretend a database status update can stop active work.
 
