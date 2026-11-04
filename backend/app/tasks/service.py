@@ -277,8 +277,21 @@ async def transition_task(
 
     target_status = command["target"]
     if task.status == target_status:
-        # Safe retry after a lost response; do not append a duplicate event.
-        return TaskRead.model_validate(task)
+        # Only treat the call as a retry if the matching command is the latest
+        # committed lifecycle event. QUEUED alone, for example, does not prove
+        # that a resume command ever happened; it may be the task's initial state.
+        latest_event_type = await db.scalar(
+            select(TaskEvent.event_type)
+            .where(
+                TaskEvent.tenant_id == tenant_id,
+                TaskEvent.task_id == task_id,
+            )
+            .order_by(TaskEvent.sequence.desc())
+            .limit(1)
+        )
+        if latest_event_type == command["event_type"]:
+            return TaskRead.model_validate(task)
+        raise TaskStateConflict
 
     if task.status not in command["from_statuses"]:
         raise TaskStateConflict
