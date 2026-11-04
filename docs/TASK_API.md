@@ -65,13 +65,14 @@ Send `Idempotency-Key` as a header (8–128 printable ASCII characters) with a J
 | Resume | `PAUSED` | `QUEUED` | `TASK_RESUMED` |
 | Cancel | `QUEUED`, `PAUSED` | `CANCELLED` | `TASK_CANCELLED` |
 
-Each command locks the task row, validates the current status, updates the status and appends the next task-local event sequence in one transaction. Repeating a command when the task is already in its target state returns the current task without appending another event. Commands from unsupported states return 409.
+Each command locks the task row, validates the current status, updates the status and appends the next task-local event sequence in one transaction. Repeating a command when the task is already in its target state returns the current task without appending another event. Concurrent commands serialize on the row lock; only the first actual transition appends an event. Commands from unsupported states return 409.
 
 A task in `RUNNING` cannot yet be paused or cancelled. That requires a worker command channel and cooperative execution handling; the API does not pretend a database status update can stop active work.
 
 ## Not implemented by this slice
 
 - Worker lease, heartbeat, execution, retries or recovery.
+- Cooperative pause/cancel for a task already in `RUNNING` (until a worker command channel exists).
 - SSE streaming, heartbeat and live reconnect (the event read endpoint is the replay foundation only).
 - Usage quotas, per-user rate limits and retention cleanup jobs.
 - Android remote task UI and local task/event cache.
