@@ -127,6 +127,8 @@ def signed_in_client():
                 "user_id": response.json()["user_id"],
                 "tenant_id": response.json()["tenant_id"],
                 "private_key": private_key,
+                "external_token": external_token,
+                "settings": settings,
                 "subject": subject,
             }
     finally:
@@ -315,26 +317,51 @@ def test_invalid_task_cursor_returns_validation_error(signed_in_client) -> None:
 
 
 def test_concurrent_same_idempotency_key_creates_only_one_task(signed_in_client) -> None:
-    client = signed_in_client["client"]
-    headers = {
-        **signed_in_client["headers"],
-        "Idempotency-Key": f"concurrent-{uuid4().hex}",
-    }
+    first_client = signed_in_client["client"]
+    second_app = create_app(signed_in_client["settings"])
+    second_app.state.oidc_jwks_client = FakeJwksClient(
+        signed_in_client["private_key"].public_key()
+    )
+
     body = {
         "title": "One task despite duplicate delivery",
         "prompt": "Two callers submit the same logical request at the same time.",
     }
+    idempotency_key = f"concurrent-{uuid4().hex}"
 
-    def submit():
-        return client.post("/api/v1/tasks", headers=headers, json=body)
+    with TestClient(second_app) as second_client:
+        second_login = second_client.post(
+            "/api/v1/auth/session",
+            headers={"Authorization": f"Bearer {signed_in_client['external_token']}"},
+        )
+        assert second_login.status_code == 201, second_login.text
+        second_headers = {
+            "Authorization": f"Bearer {second_login.json()['access_token']}",
+            "Idempotency-Key": idempotency_key,
+        }
+        first_headers = {
+            **signed_in_client["headers"],
+            "Idempotency-Key": idempotency_key,
+        }
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        responses = list(executor.map(lambda _: submit(), range(2)))
+        def submit_first():
+            return first_client.post("/api/v1/tasks", headers=first_headers, json=body)
+
+        def submit_second():
+            return second_client.post("/api/v1/tasks", headers=second_headers, json=body)
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            first_future = executor.submit(submit_first)
+            second_future = executor.submit(submit_second)
+            responses = [first_future.result(), second_future.result()]
 
     assert [response.status_code for response in responses] == [201, 201]
     assert responses[0].json()["id"] == responses[1].json()["id"]
 
-    listed = client.get("/api/v1/tasks?limit=100", headers=signed_in_client["headers"])
+    listed = first_client.get(
+        "/api/v1/tasks?limit=100",
+        headers=signed_in_client["headers"],
+    )
     assert listed.status_code == 200
     matching = [
         item for item in listed.json()["items"]
