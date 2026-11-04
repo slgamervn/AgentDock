@@ -389,6 +389,13 @@ def test_pre_execution_task_commands_are_idempotent_and_append_ordered_events(
     assert created.status_code == 201, created.text
     task_id = created.json()["id"]
 
+    # A task that was created directly as QUEUED has not been resumed yet.
+    initial_resume = client.post(
+        f"/api/v1/tasks/{task_id}/resume",
+        headers=signed_in_client["headers"],
+    )
+    assert initial_resume.status_code == 409
+
     paused = client.post(
         f"/api/v1/tasks/{task_id}/pause",
         headers=signed_in_client["headers"],
