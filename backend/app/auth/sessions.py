@@ -45,7 +45,7 @@ class AccountUnavailable(Exception):
 
 
 def _token_hash(token: str) -> str:
-    return sha256(token.encode("ascii")).hexdigest()
+    return sha256(token.encode("utf-8")).hexdigest()
 
 
 async def _resolve_or_create_account(
@@ -253,20 +253,21 @@ async def authenticate_access_token(
     access_token: str,
 ) -> SessionPrincipal | None:
     now = datetime.now(timezone.utc)
-    session_record = await db.scalar(
-        select(UserSession)
-        .join(SessionToken, SessionToken.session_id == UserSession.id)
-        .join(User, User.id == UserSession.user_id)
-        .where(
-            SessionToken.token_hash == _token_hash(access_token),
-            SessionToken.token_type == "ACCESS",
-            SessionToken.expires_at > now,
-            SessionToken.revoked_at.is_(None),
-            UserSession.expires_at > now,
-            UserSession.revoked_at.is_(None),
-            User.is_active.is_(True),
+    async with db.begin():
+        session_record = await db.scalar(
+            select(UserSession)
+            .join(SessionToken, SessionToken.session_id == UserSession.id)
+            .join(User, User.id == UserSession.user_id)
+            .where(
+                SessionToken.token_hash == _token_hash(access_token),
+                SessionToken.token_type == "ACCESS",
+                SessionToken.expires_at > now,
+                SessionToken.revoked_at.is_(None),
+                UserSession.expires_at > now,
+                UserSession.revoked_at.is_(None),
+                User.is_active.is_(True),
+            )
         )
-    )
     if session_record is None:
         return None
     return SessionPrincipal(
