@@ -5,7 +5,7 @@ import hashlib
 import json
 from uuid import UUID
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +28,10 @@ class IdempotencyConflict(Exception):
 
 class TaskNotFound(Exception):
     """The task does not exist in the authenticated workspace."""
+
+
+class TaskStateConflict(Exception):
+    """The requested command is not valid for the task's current state."""
 
 
 def _request_hash(payload: TaskCreate) -> str:
@@ -227,3 +231,79 @@ async def list_task_events(
         items=[TaskEventRead.model_validate(event) for event in items],
         next_after_sequence=items[-1].sequence if has_more and items else None,
     )
+
+
+
+async def transition_task(
+    db: AsyncSession,
+    tenant_id: UUID,
+    task_id: UUID,
+    action: str,
+) -> TaskRead:
+    """Apply a safe pre-execution command and append its event atomically.
+
+    The task row lock serializes state changes and allocation of the next
+    task-local event sequence. Callers must supply the tenant-scoped request
+    transaction so RLS remains active for the entire operation.
+    """
+    transitions = {
+        "pause": {
+            "target": "PAUSED",
+            "event_type": "TASK_PAUSED",
+            "from_statuses": {"QUEUED"},
+        },
+        "resume": {
+            "target": "QUEUED",
+            "event_type": "TASK_RESUMED",
+            "from_statuses": {"PAUSED"},
+        },
+        "cancel": {
+            "target": "CANCELLED",
+            "event_type": "TASK_CANCELLED",
+            "from_statuses": {"QUEUED", "PAUSED"},
+        },
+    }
+    command = transitions.get(action)
+    if command is None:
+        raise ValueError("Unsupported task command.")
+
+    task = await db.scalar(
+        select(Task)
+        .where(Task.id == task_id, Task.tenant_id == tenant_id)
+        .with_for_update()
+    )
+    if task is None:
+        raise TaskNotFound
+
+    target_status = command["target"]
+    if task.status == target_status:
+        # Safe retry after a lost response; do not append a duplicate event.
+        return TaskRead.model_validate(task)
+
+    if task.status not in command["from_statuses"]:
+        raise TaskStateConflict
+
+    previous_status = task.status
+    task.status = target_status
+    await db.flush()
+
+    latest_sequence = await db.scalar(
+        select(func.max(TaskEvent.sequence)).where(
+            TaskEvent.tenant_id == tenant_id,
+            TaskEvent.task_id == task_id,
+        )
+    )
+    db.add(
+        TaskEvent(
+            tenant_id=tenant_id,
+            task_id=task_id,
+            sequence=(latest_sequence or 0) + 1,
+            event_type=command["event_type"],
+            payload={
+                "from_status": previous_status,
+                "to_status": target_status,
+            },
+        )
+    )
+    await db.flush()
+    return TaskRead.model_validate(task)
