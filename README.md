@@ -7,7 +7,7 @@ AgentDock is a native Kotlin/Jetpack Compose app. The interface defaults to Viet
 
 **Autonomous Agent Control Center** — ứng dụng Android để giao việc, theo dõi tiến trình và phê duyệt hành động của các AI Agent.
 
-> Trạng thái hiện tại: Android 0.1.0 vẫn mới có workspace và lưu bản nháp cục bộ. Nhánh `test` đã tích hợp backend identity/session; nhánh feature `feature/durable-task-api` đang bổ sung task create/read, idempotency và event API. Android PKCE login, worker thực thi và Agent runtime vẫn chưa có.
+> Trạng thái hiện tại: Android 0.1.0 vẫn là control plane lưu bản nháp cục bộ. Nhánh `test` đã có backend identity/session, task create/read/event và các lệnh pause/resume/cancel trước khi worker nhận task. Android PKCE login, worker thực thi, SSE và Agent runtime vẫn chưa hoàn thiện.
 
 ## Nguyên tắc sản phẩm
 

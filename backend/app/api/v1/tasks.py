@@ -8,10 +8,12 @@ from app.tasks.service import (
     IdempotencyConflict,
     InvalidTaskCursorError,
     TaskNotFound,
+    TaskStateConflict,
     create_task_idempotently,
     get_task,
     list_task_events,
     list_tasks,
+    transition_task,
 )
 from app.tenancy.dependencies import (
     TenantRequestContext,
@@ -125,3 +127,69 @@ async def read_task_events(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found.",
         ) from None
+
+
+
+async def _run_task_command(
+    action: str,
+    task_id: UUID,
+    context: TenantContext,
+    response: Response,
+) -> TaskRead:
+    _prevent_caching(response)
+    try:
+        return await transition_task(
+            context.db,
+            context.principal.tenant_id,
+            task_id,
+            action,
+        )
+    except TaskNotFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found.",
+        ) from None
+    except TaskStateConflict:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The task cannot accept this command in its current state.",
+        ) from None
+
+
+@router.post(
+    "/{task_id}/pause",
+    response_model=TaskRead,
+    summary="Pause a queued task before worker execution",
+)
+async def pause_task(
+    task_id: UUID,
+    context: TenantContext,
+    response: Response,
+) -> TaskRead:
+    return await _run_task_command("pause", task_id, context, response)
+
+
+@router.post(
+    "/{task_id}/resume",
+    response_model=TaskRead,
+    summary="Resume a paused task to the queue",
+)
+async def resume_task(
+    task_id: UUID,
+    context: TenantContext,
+    response: Response,
+) -> TaskRead:
+    return await _run_task_command("resume", task_id, context, response)
+
+
+@router.post(
+    "/{task_id}/cancel",
+    response_model=TaskRead,
+    summary="Cancel a queued or paused task",
+)
+async def cancel_task(
+    task_id: UUID,
+    context: TenantContext,
+    response: Response,
+) -> TaskRead:
+    return await _run_task_command("cancel", task_id, context, response)

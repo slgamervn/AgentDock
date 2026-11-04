@@ -22,17 +22,24 @@ The Android application is a control plane, not the execution host. It owns user
 - Alembic owns versioned schema changes. The first migration creates tenants, users, tenant memberships, tasks, ordered task events and idempotency records, including the indexes and constraints needed by the initial model.
 - RLS is enabled and forced on every tenant-owned table. The tenant policy compares tenant_id with the transaction-local app.current_tenant_id setting and defaults to deny when no tenant context exists.
 - Migrations and runtime use separate database roles. The runtime role must be NOSUPERUSER, NOBYPASSRLS and not own tenant tables. A superuser or BYPASSRLS role can bypass PostgreSQL row policies.
-- The server begins a transaction, sets the client-supplied tenant ID only as a transaction-local candidate scope, and queries the authenticated user's active membership under RLS before accessing tenant data. Missing membership causes rollback and denial. The candidate GUC alone does not grant permission; RLS is defense in depth, not protection against arbitrary SQL execution under a compromised application role.
+- The server derives the candidate tenant from the authenticated AgentDock session, sets it only as a transaction-local RLS scope, and queries the user's active membership under RLS before accessing tenant data. Task requests do not accept a client-selected tenant ID. Missing membership causes rollback and denial. The tenant GUC alone does not grant permission; RLS is defense in depth, not protection against arbitrary SQL execution under a compromised application role.
 - CI applies migrations and verifies read/write isolation against a real PostgreSQL service, including a restricted runtime role.
 
-## Backend direction (planned; not implemented yet)
+## Backend implementation status
 
-- Authentication, refresh-session rotation/revocation and tenant membership authorization APIs.
-- Task creation/control endpoints, a consistent API error envelope and server-side idempotency handling.
-- LangGraph owns the explicit workflow graph, checkpoints and recovery transitions.
+- OIDC access-token verification, `(issuer, subject)` identity mapping, personal-workspace provisioning and opaque revocable sessions are implemented on `test`.
+- The task API supports authenticated create/list/detail/event reads, tenant-scoped idempotency and keyset pagination.
+- Pre-execution lifecycle commands support `QUEUED → PAUSED → QUEUED` and `QUEUED/PAUSED → CANCELLED`. A task row lock serializes transitions; each actual transition and its next task-local event are committed atomically. Repeated commands are no-ops only when the latest event proves that the same command already completed; commands against `RUNNING` are rejected until a worker supports cooperative control.
+- Every task request verifies the session and active workspace membership under RLS in the same transaction. Client-supplied tenant IDs are not accepted.
+- Android Authorization Code + PKCE and provider-specific configuration remain separate work.
+
+## Backend direction (remaining)
+
+- Worker processes with database-backed leases, heartbeats, cooperative cancellation, retry/backoff, reclaim and recovery.
+- SSE delivery with ordered replay, heartbeat, reconnect and client deduplication.
+- LangGraph owns the explicit workflow graph, checkpoints and recovery transitions after worker execution exists.
 - OpenHands runs delegated coding/research work inside an isolated workspace. It does not own the task's global lifecycle.
-- Independent worker processes use database-backed leases/heartbeats and idempotent transitions; a queue is a delivery mechanism, not the source of truth.
-- Approval records, action-bound policy evaluation, audit trail and artifact storage are future schema/API slices.
+- Approval records, action-bound policy evaluation, audit trail and artifact storage remain future slices.
 - Object storage stores generated files and reports; Redis may be introduced for ephemeral queue/event fan-out after workload needs are measured.
 
 ## Task lifecycle target
