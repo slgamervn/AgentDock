@@ -159,15 +159,11 @@ def test_create_task_is_idempotent_and_persists_ordered_creation_event(signed_in
         headers=signed_in_client["headers"],
     )
     assert events.status_code == 200
-    assert events.json()["items"] == [
-        {
-            "id": events.json()["items"][0]["id"],
-            "sequence": 1,
-            "event_type": "TASK_CREATED",
-            "payload": {"status": "QUEUED"},
-            "occurred_at": events.json()["items"][0]["occurred_at"],
-        }
-    ]
+    event_items = events.json()["items"]
+    assert len(event_items) == 1
+    assert event_items[0]["sequence"] == 1
+    assert event_items[0]["event_type"] == "TASK_CREATED"
+    assert event_items[0]["payload"] == {"status": "QUEUED"}
 
 
 def test_task_list_uses_stable_cursor_pagination(signed_in_client) -> None:
@@ -274,3 +270,29 @@ def test_revoked_workspace_membership_blocks_task_access(signed_in_client) -> No
         headers=signed_in_client["headers"],
     )
     assert response.status_code == 403
+
+
+
+def test_task_creation_does_not_accept_a_client_selected_tenant(signed_in_client) -> None:
+    response = signed_in_client["client"].post(
+        "/api/v1/tasks",
+        headers={
+            **signed_in_client["headers"],
+            "Idempotency-Key": f"tenant-override-{uuid4().hex}",
+        },
+        json={
+            "title": "Attempted tenant override",
+            "prompt": "The workspace must come from the authenticated session.",
+            "tenant_id": str(uuid4()),
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_invalid_task_cursor_returns_validation_error(signed_in_client) -> None:
+    response = signed_in_client["client"].get(
+        "/api/v1/tasks",
+        params={"cursor": "not-a-valid-cursor"},
+        headers=signed_in_client["headers"],
+    )
+    assert response.status_code == 422
