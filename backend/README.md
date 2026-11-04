@@ -51,7 +51,7 @@ python -m alembic upgrade head
 Then, as the migration role or database administrator, grant only the required runtime access:
 
 ```sql
-GRANT SELECT, INSERT, UPDATE ON TABLE tenants, users TO agentdock_runtime;
+GRANT SELECT, INSERT ON TABLE tenants, users TO agentdock_runtime;
 GRANT SELECT, INSERT, UPDATE
   ON TABLE auth_identities, user_sessions, session_tokens
   TO agentdock_runtime;
