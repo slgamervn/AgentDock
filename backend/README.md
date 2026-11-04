@@ -76,7 +76,7 @@ API liveness: http://127.0.0.1:8000/api/v1/health/live. Database readiness: http
 
 ## Tests
 
-Run `python -m compileall -q app migrations tests`, then `python -m pytest -q`. PostgreSQL isolation tests require `AGENTDOCK_TEST_ADMIN_DATABASE_URL` and `AGENTDOCK_TEST_DATABASE_URL`; they verify a real non-owner, non-superuser runtime role, forced RLS, transaction-local tenant scope, cross-tenant read isolation and rejected cross-tenant writes. Those tests are always enabled in GitHub Actions.
+Run `python -m compileall -q app migrations tests`, then `python -m pytest -q`. The PostgreSQL integration suite covers migration/schema permissions, forced tenant RLS, identity-to-account provisioning, workspace ownership, opaque token hashing, session refresh rotation, replay revocation and logout. PostgreSQL tests require `AGENTDOCK_TEST_ADMIN_DATABASE_URL` and `AGENTDOCK_TEST_DATABASE_URL`; they are always configured in GitHub Actions. Run the suite with the restricted runtime role for application operations and the admin role only for test setup/assertions.
 
 Copy `.env.example` for local configuration. Never commit real `.env` files, credentials or signing material.
 
