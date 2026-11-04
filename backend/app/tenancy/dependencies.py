@@ -7,7 +7,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.sessions import SessionPrincipal, authenticate_access_token
+from app.auth.sessions import (
+    SessionPrincipal,
+    authenticate_access_token_in_transaction,
+)
 from app.db.models import TenantMembership
 from app.db.session import set_tenant_context
 
@@ -40,20 +43,21 @@ async def get_current_tenant_context(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    async with factory() as auth_db:
-        principal = await authenticate_access_token(auth_db, credentials.credentials)
-    if principal is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing bearer token.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
     async with factory() as db:
         async with db.begin():
-            # The session tenant is only a candidate scope. RLS is activated
-            # before membership lookup; tenant data is not queried until the
-            # authenticated user is confirmed as an active member.
+            # Authentication, tenant selection and membership authorization use
+            # one request transaction. The tenant ID is only a candidate scope;
+            # RLS is active before the membership lookup.
+            principal = await authenticate_access_token_in_transaction(
+                db, credentials.credentials
+            )
+            if principal is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid or missing bearer token.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
             await set_tenant_context(db, principal.tenant_id)
             membership_id = await db.scalar(
                 select(TenantMembership.id).where(
