@@ -80,6 +80,8 @@ def test_identity_provisioning_rotating_refresh_and_logout() -> None:
                 headers={"Authorization": f"Bearer {external_token}"},
             )
             assert first_response.status_code == 201, first_response.text
+            assert first_response.headers["cache-control"] == "no-store"
+            assert first_response.headers["pragma"] == "no-cache"
             first = first_response.json()
             user_id = UUID(first["user_id"])
             tenant_id = UUID(first["tenant_id"])
@@ -160,6 +162,8 @@ def test_identity_provisioning_rotating_refresh_and_logout() -> None:
                 json={"refresh_token": first["refresh_token"]},
             )
             assert rotated_response.status_code == 200, rotated_response.text
+            assert rotated_response.headers["cache-control"] == "no-store"
+            assert rotated_response.headers["pragma"] == "no-cache"
             rotated = rotated_response.json()
             assert rotated["session_id"] == first["session_id"]
             assert rotated["refresh_token"] != first["refresh_token"]
