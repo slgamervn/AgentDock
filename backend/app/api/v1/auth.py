@@ -16,7 +16,6 @@ from app.auth.sessions import (
     AccountUnavailable,
     SessionPrincipal,
     SessionTokenPair,
-    authenticate_access_token,
     create_auth_session,
     revoke_auth_session,
     rotate_refresh_token,
@@ -37,6 +36,7 @@ class SessionResponse(BaseModel):
     expires_in: int
     refresh_token: str
     session_expires_at: datetime
+    session_id: UUID
     user_id: UUID
     tenant_id: UUID
 
@@ -57,6 +57,7 @@ def _session_response(pair: SessionTokenPair) -> SessionResponse:
         expires_in=pair.expires_in,
         refresh_token=pair.refresh_token,
         session_expires_at=pair.session_expires_at,
+        session_id=pair.session_id,
         user_id=pair.user_id,
         tenant_id=pair.tenant_id,
     )
