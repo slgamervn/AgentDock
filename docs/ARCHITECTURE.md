@@ -22,14 +22,14 @@ The Android application is a control plane, not the execution host. It owns user
 - Alembic owns versioned schema changes. The first migration creates tenants, users, tenant memberships, tasks, ordered task events and idempotency records, including the indexes and constraints needed by the initial model.
 - RLS is enabled and forced on every tenant-owned table. The tenant policy compares tenant_id with the transaction-local app.current_tenant_id setting and defaults to deny when no tenant context exists.
 - Migrations and runtime use separate database roles. The runtime role must be NOSUPERUSER, NOBYPASSRLS and not own tenant tables. A superuser or BYPASSRLS role can bypass PostgreSQL row policies.
-- The server begins a transaction, sets the client-supplied tenant ID only as a transaction-local candidate scope, and queries the authenticated user's active membership under RLS before accessing tenant data. Missing membership causes rollback and denial. The candidate GUC alone does not grant permission; RLS is defense in depth, not protection against arbitrary SQL execution under a compromised application role.
+- The server derives the candidate tenant from the authenticated AgentDock session, sets it only as a transaction-local RLS scope, and queries the user's active membership under RLS before accessing tenant data. Task requests do not accept a client-selected tenant ID. Missing membership causes rollback and denial. The tenant GUC alone does not grant permission; RLS is defense in depth, not protection against arbitrary SQL execution under a compromised application role.
 - CI applies migrations and verifies read/write isolation against a real PostgreSQL service, including a restricted runtime role.
 
 ## Backend implementation status
 
 - OIDC access-token verification, `(issuer, subject)` identity mapping, personal-workspace provisioning and opaque revocable sessions are implemented on `test`.
 - The task API supports authenticated create/list/detail/event reads, tenant-scoped idempotency and keyset pagination.
-- Pre-execution lifecycle commands support `QUEUED → PAUSED → QUEUED` and `QUEUED/PAUSED → CANCELLED`. A task row lock serializes transitions; each actual transition and its next task-local event are committed atomically.
+- Pre-execution lifecycle commands support `QUEUED → PAUSED → QUEUED` and `QUEUED/PAUSED → CANCELLED`. A task row lock serializes transitions; each actual transition and its next task-local event are committed atomically. Repeated commands at the target state are no-ops; commands against `RUNNING` are rejected until a worker supports cooperative control.
 - Every task request verifies the session and active workspace membership under RLS in the same transaction. Client-supplied tenant IDs are not accepted.
 - Android Authorization Code + PKCE and provider-specific configuration remain separate work.
 
