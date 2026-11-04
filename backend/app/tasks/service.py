@@ -319,4 +319,7 @@ async def transition_task(
         )
     )
     await db.flush()
+    # SQLAlchemy expires server/onupdate expression attributes after flush.
+    # Refresh explicitly inside the async transaction before Pydantic reads ORM fields.
+    await db.refresh(task)
     return TaskRead.model_validate(task)
