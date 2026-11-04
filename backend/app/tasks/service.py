@@ -70,7 +70,7 @@ async def create_task_idempotently(
     idempotency_key: str,
 ) -> tuple[TaskRead, bool]:
     key = idempotency_key.strip()
-    if not key or len(key) > 128 or any(ord(char) < 0x21 or ord(char) > 0x7E for char in key):
+    if len(key) < 8 or len(key) > 128 or any(ord(char) < 0x21 or ord(char) > 0x7E for char in key):
         raise IdempotencyConflict
 
     now = datetime.now(timezone.utc)
