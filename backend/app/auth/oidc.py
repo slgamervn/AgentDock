@@ -95,7 +95,12 @@ def _verify_access_token_sync(
         raise InvalidOIDCToken("Invalid expiration")
 
     client_id = claims.get("client_id")
-    if not isinstance(client_id, str) or not client_id or len(client_id) > 255:
+    if (
+        not isinstance(client_id, str)
+        or not client_id
+        or len(client_id) > 255
+        or client_id not in settings.oidc_allowed_client_ids
+    ):
         raise InvalidOIDCToken("Invalid client ID")
     token_id = claims.get("jti")
     if not isinstance(token_id, str) or not token_id or len(token_id) > 255:
