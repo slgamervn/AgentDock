@@ -11,6 +11,8 @@ FastAPI control-plane bootstrap with the first PostgreSQL persistence boundary.
 - Runtime configuration uses the `AGENTDOCK_` prefix; database URLs use `SecretStr` in application settings.
 - SQLAlchemy async engine/session helpers and Alembic migrations.
 - Initial records: tenants, users, tenant memberships, tasks, ordered task events and idempotency records.
+- Verified external identities are mapped by the exact `(issuer, subject)` pair. First sign-in provisions a minimal account and personal workspace without trusting or linking by email.
+- AgentDock sessions use opaque random access/refresh tokens. Only SHA-256 token hashes are stored; refresh tokens rotate and replay revokes the full session family. Access tokens are short-lived and checked against PostgreSQL so logout revocation takes effect immediately.
 - PostgreSQL row-level security (RLS) is enabled and forced on every tenant-owned table.
 - Docker runs as UID/GID 10001, not root.
 
@@ -49,7 +51,10 @@ python -m alembic upgrade head
 Then, as the migration role or database administrator, grant only the required runtime access:
 
 ```sql
-GRANT SELECT ON TABLE tenants, users TO agentdock_runtime;
+GRANT SELECT, INSERT, UPDATE ON TABLE tenants, users TO agentdock_runtime;
+GRANT SELECT, INSERT, UPDATE
+  ON TABLE auth_identities, user_sessions, session_tokens
+  TO agentdock_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE
   ON TABLE tenant_memberships, tasks, task_events, idempotency_records
   TO agentdock_runtime;
@@ -79,4 +84,4 @@ Copy `.env.example` for local configuration. Never commit real `.env` files, cre
 
 Set `AGENTDOCK_OIDC_ISSUER`, `AGENTDOCK_OIDC_AUDIENCE` and `AGENTDOCK_OIDC_JWKS_URL` together. The issuer and JWKS URLs must use HTTPS and must be provisioned by the operator, never supplied by a request. The audience identifies the AgentDock API/resource server. The default algorithm allowlist is RS256; optional algorithms must remain asymmetric and explicitly allowlisted. The configured JWKS client caches keys and uses a bounded network timeout.
 
-The protected `GET /api/v1/auth/identity` endpoint is a verification probe and a reference for future protected routes. It does not create an AgentDock user or session. The API currently does not map `(issuer, subject)` to a user, rotate/revoke application sessions, create workspaces, or verify tenant membership. Keep task routes unavailable until those authorization layers are implemented. Never send an ID token to this endpoint; configure and validate the identity provider's access-token contract for the AgentDock API audience.
+The protected `GET /api/v1/auth/identity` endpoint is a verification probe and a reference for future protected routes. It does not create an AgentDock user or session. The backend maps `(issuer, subject)` to an internal account and provisions a personal workspace on first verified sign-in. It issues short-lived opaque AgentDock access tokens and rotating refresh tokens, persists only token hashes, detects refresh-token replay and supports immediate session revocation. The Android Authorization Code + PKCE flow and provider-specific setup remain separate work. This session foundation does not itself implement task CRUD or worker execution. Never send an ID token to this endpoint; configure and validate the identity provider's access-token contract for the AgentDock API audience.
