@@ -8,7 +8,7 @@ The Android app is a public OAuth client. When the client login flow is implemen
 
 The current backend verifier accepts only signed RFC 9068-style JWT access tokens whose JOSE typ is at+jwt or application/at+jwt. It validates the configured HTTPS JWKS, asymmetric algorithm allowlist, issuer, AgentDock API audience, expiry, issued-at, client_id and jti; azp is checked when configured. Do not send an OIDC ID token. A provider that does not issue this access-token profile for the AgentDock API requires a separately reviewed adapter; do not weaken the verifier to make a provider fit.
 
-Configure AGENTDOCK_OIDC_ISSUER, AGENTDOCK_OIDC_AUDIENCE and AGENTDOCK_OIDC_JWKS_URL together. The issuer and JWKS URL must be HTTPS and operator-provisioned, never request-controlled.
+Configure AGENTDOCK_OIDC_ISSUER, AGENTDOCK_OIDC_AUDIENCE, AGENTDOCK_OIDC_JWKS_URL and AGENTDOCK_OIDC_ALLOWED_CLIENT_IDS together. The allowed client IDs must be a JSON array containing only registered OAuth clients. The issuer and JWKS URL must be HTTPS and operator-provisioned, never request-controlled.
 
 ## Endpoints
 
