@@ -85,7 +85,10 @@ async def create_session(
     identity: Annotated[VerifiedIdentity, Depends(get_current_identity)],
     db: Annotated[AsyncSession, Depends(get_database_session)],
     request: Request,
+    response: Response,
 ) -> SessionResponse:
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
     try:
         pair = await create_auth_session(db, identity, request.app.state.settings)
     except AccountUnavailable:
@@ -105,7 +108,10 @@ async def refresh_session(
     payload: RefreshRequest,
     db: Annotated[AsyncSession, Depends(get_database_session)],
     request: Request,
+    response: Response,
 ) -> SessionResponse:
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
     pair = await rotate_refresh_token(
         db,
         payload.refresh_token.get_secret_value(),
