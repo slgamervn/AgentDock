@@ -248,26 +248,29 @@ async def rotate_refresh_token(
     return pair
 
 
-async def authenticate_access_token(
+async def authenticate_access_token_in_transaction(
     db: AsyncSession,
     access_token: str,
 ) -> SessionPrincipal | None:
+    """Authenticate an access token inside the caller's active transaction."""
+    if not db.in_transaction():
+        raise RuntimeError("Access-token lookup requires an active transaction.")
+
     now = datetime.now(timezone.utc)
-    async with db.begin():
-        session_record = await db.scalar(
-            select(UserSession)
-            .join(SessionToken, SessionToken.session_id == UserSession.id)
-            .join(User, User.id == UserSession.user_id)
-            .where(
-                SessionToken.token_hash == _token_hash(access_token),
-                SessionToken.token_type == "ACCESS",
-                SessionToken.expires_at > now,
-                SessionToken.revoked_at.is_(None),
-                UserSession.expires_at > now,
-                UserSession.revoked_at.is_(None),
-                User.is_active.is_(True),
-            )
+    session_record = await db.scalar(
+        select(UserSession)
+        .join(SessionToken, SessionToken.session_id == UserSession.id)
+        .join(User, User.id == UserSession.user_id)
+        .where(
+            SessionToken.token_hash == _token_hash(access_token),
+            SessionToken.token_type == "ACCESS",
+            SessionToken.expires_at > now,
+            SessionToken.revoked_at.is_(None),
+            UserSession.expires_at > now,
+            UserSession.revoked_at.is_(None),
+            User.is_active.is_(True),
         )
+    )
     if session_record is None:
         return None
     return SessionPrincipal(
@@ -275,6 +278,14 @@ async def authenticate_access_token(
         tenant_id=session_record.tenant_id,
         session_id=session_record.id,
     )
+
+
+async def authenticate_access_token(
+    db: AsyncSession,
+    access_token: str,
+) -> SessionPrincipal | None:
+    async with db.begin():
+        return await authenticate_access_token_in_transaction(db, access_token)
 
 
 async def revoke_auth_session(
