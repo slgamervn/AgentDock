@@ -29,7 +29,7 @@ The Android application is a control plane, not the execution host. It owns user
 
 - OIDC access-token verification, `(issuer, subject)` identity mapping, personal-workspace provisioning and opaque revocable sessions are implemented on `test`.
 - The task API supports authenticated create/list/detail/event reads, tenant-scoped idempotency and keyset pagination.
-- Pre-execution lifecycle commands support `QUEUED → PAUSED → QUEUED` and `QUEUED/PAUSED → CANCELLED`. A task row lock serializes transitions; each actual transition and its next task-local event are committed atomically. Repeated commands at the target state are no-ops; commands against `RUNNING` are rejected until a worker supports cooperative control.
+- Pre-execution lifecycle commands support `QUEUED → PAUSED → QUEUED` and `QUEUED/PAUSED → CANCELLED`. A task row lock serializes transitions; each actual transition and its next task-local event are committed atomically. Repeated commands are no-ops only when the latest event proves that the same command already completed; commands against `RUNNING` are rejected until a worker supports cooperative control.
 - Every task request verifies the session and active workspace membership under RLS in the same transaction. Client-supplied tenant IDs are not accepted.
 - Android Authorization Code + PKCE and provider-specific configuration remain separate work.
 
