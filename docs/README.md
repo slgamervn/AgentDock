@@ -15,6 +15,8 @@ This directory separates **verified implementation state**, **approved product d
 
 ## Operational and trust documents
 
+- [Task API contract](TASK_API.md) — session-authenticated task creation, keyset listing, tenant isolation, idempotency and ordered event reads.
+
 - [Authentication and session contract](AUTHENTICATION.md) — provider-neutral backend identity mapping and revocable session design; check active branch and CI state for implementation validation.
 
 - [Device performance](DEVICE_PERFORMANCE.md) — adaptive behavior and benchmark acceptance.
