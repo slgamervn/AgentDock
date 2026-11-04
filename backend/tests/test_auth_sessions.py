@@ -65,6 +65,7 @@ def test_identity_provisioning_rotating_refresh_and_logout() -> None:
         oidc_audience=AUDIENCE,
         oidc_jwks_url="https://identity.agentdock.test/.well-known/jwks.json",
         oidc_allowed_algorithms=["RS256"],
+        oidc_allowed_client_ids=["agentdock-test-client"],
         oidc_clock_skew_seconds=0,
     )
     app = create_app(settings)
