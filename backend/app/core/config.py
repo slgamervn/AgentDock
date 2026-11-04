@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     oidc_audience: str | None = None
     oidc_jwks_url: str | None = None
     oidc_authorized_party: str | None = None
+    oidc_allowed_client_ids: list[str] = Field(default_factory=list)
     oidc_allowed_algorithms: list[OIDCAlgorithm] = Field(default_factory=lambda: ["RS256"])
     oidc_clock_skew_seconds: int = Field(default=30, ge=0, le=120)
     oidc_jwks_timeout_seconds: int = Field(default=5, ge=1, le=10)
@@ -60,6 +61,11 @@ class Settings(BaseSettings):
                 raise ValueError("OIDC_AUDIENCE must not be empty.")
             if not self.oidc_allowed_algorithms:
                 raise ValueError("At least one supported OIDC signing algorithm must be configured.")
+            if not self.oidc_allowed_client_ids or any(
+                not client_id.strip() or len(client_id) > 255
+                for client_id in self.oidc_allowed_client_ids
+            ):
+                raise ValueError("OIDC_ALLOWED_CLIENT_IDS must contain at least one valid client ID.")
         return self
 
 
