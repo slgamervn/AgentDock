@@ -368,3 +368,150 @@ def test_concurrent_same_idempotency_key_creates_only_one_task(signed_in_client)
         if item["title"] == body["title"]
     ]
     assert len(matching) == 1
+
+
+
+def test_pre_execution_task_commands_are_idempotent_and_append_ordered_events(
+    signed_in_client,
+) -> None:
+    client = signed_in_client["client"]
+    created = client.post(
+        "/api/v1/tasks",
+        headers={
+            **signed_in_client["headers"],
+            "Idempotency-Key": f"lifecycle-{uuid4().hex}",
+        },
+        json={
+            "title": "Pre-execution lifecycle",
+            "prompt": "Pause, resume and cancel before a worker claims the task.",
+        },
+    )
+    assert created.status_code == 201, created.text
+    task_id = created.json()["id"]
+
+    paused = client.post(
+        f"/api/v1/tasks/{task_id}/pause",
+        headers=signed_in_client["headers"],
+    )
+    assert paused.status_code == 200, paused.text
+    assert paused.json()["status"] == "PAUSED"
+
+    # Retrying a command whose target state is already current is safe.
+    pause_replay = client.post(
+        f"/api/v1/tasks/{task_id}/pause",
+        headers=signed_in_client["headers"],
+    )
+    assert pause_replay.status_code == 200
+    assert pause_replay.json()["status"] == "PAUSED"
+
+    resumed = client.post(
+        f"/api/v1/tasks/{task_id}/resume",
+        headers=signed_in_client["headers"],
+    )
+    assert resumed.status_code == 200, resumed.text
+    assert resumed.json()["status"] == "QUEUED"
+
+    resume_replay = client.post(
+        f"/api/v1/tasks/{task_id}/resume",
+        headers=signed_in_client["headers"],
+    )
+    assert resume_replay.status_code == 200
+    assert resume_replay.json()["status"] == "QUEUED"
+
+    cancelled = client.post(
+        f"/api/v1/tasks/{task_id}/cancel",
+        headers=signed_in_client["headers"],
+    )
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["status"] == "CANCELLED"
+
+    cancel_replay = client.post(
+        f"/api/v1/tasks/{task_id}/cancel",
+        headers=signed_in_client["headers"],
+    )
+    assert cancel_replay.status_code == 200
+    assert cancel_replay.json()["status"] == "CANCELLED"
+
+    invalid_resume = client.post(
+        f"/api/v1/tasks/{task_id}/resume",
+        headers=signed_in_client["headers"],
+    )
+    assert invalid_resume.status_code == 409
+
+    events = client.get(
+        f"/api/v1/tasks/{task_id}/events",
+        headers=signed_in_client["headers"],
+    )
+    assert events.status_code == 200
+    items = events.json()["items"]
+    assert [item["sequence"] for item in items] == [1, 2, 3, 4]
+    assert [item["event_type"] for item in items] == [
+        "TASK_CREATED",
+        "TASK_PAUSED",
+        "TASK_RESUMED",
+        "TASK_CANCELLED",
+    ]
+    assert items[1]["payload"] == {
+        "from_status": "QUEUED",
+        "to_status": "PAUSED",
+    }
+    assert items[2]["payload"] == {
+        "from_status": "PAUSED",
+        "to_status": "QUEUED",
+    }
+    assert items[3]["payload"] == {
+        "from_status": "QUEUED",
+        "to_status": "CANCELLED",
+    }
+
+
+def test_running_task_cannot_be_paused_or_cancelled_without_worker_support(
+    signed_in_client,
+) -> None:
+    client = signed_in_client["client"]
+    created = client.post(
+        "/api/v1/tasks",
+        headers={
+            **signed_in_client["headers"],
+            "Idempotency-Key": f"running-command-{uuid4().hex}",
+        },
+        json={
+            "title": "Worker-owned state",
+            "prompt": "This fixture simulates a task already claimed by a worker.",
+        },
+    )
+    assert created.status_code == 201, created.text
+    task_id = created.json()["id"]
+
+    async def mark_as_running() -> None:
+        engine = create_async_engine(ADMIN_DATABASE_URL, pool_pre_ping=True)
+        try:
+            async with engine.begin() as connection:
+                await connection.execute(
+                    text(
+                        "UPDATE tasks SET status = 'RUNNING' "
+                        "WHERE id = :task_id AND tenant_id = :tenant_id"
+                    ),
+                    {
+                        "task_id": task_id,
+                        "tenant_id": signed_in_client["tenant_id"],
+                    },
+                )
+        finally:
+            await engine.dispose()
+
+    asyncio.run(mark_as_running())
+
+    for command in ("pause", "resume", "cancel"):
+        response = client.post(
+            f"/api/v1/tasks/{task_id}/{command}",
+            headers=signed_in_client["headers"],
+        )
+        assert response.status_code == 409
+
+    events = client.get(
+        f"/api/v1/tasks/{task_id}/events",
+        headers=signed_in_client["headers"],
+    )
+    assert events.status_code == 200
+    assert [item["sequence"] for item in events.json()["items"]] == [1]
