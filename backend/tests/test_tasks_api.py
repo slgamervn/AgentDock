@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import os
 import time
 from types import SimpleNamespace
@@ -310,3 +311,33 @@ def test_invalid_task_cursor_returns_validation_error(signed_in_client) -> None:
         headers=signed_in_client["headers"],
     )
     assert response.status_code == 422
+
+
+
+def test_concurrent_same_idempotency_key_creates_only_one_task(signed_in_client) -> None:
+    client = signed_in_client["client"]
+    headers = {
+        **signed_in_client["headers"],
+        "Idempotency-Key": f"concurrent-{uuid4().hex}",
+    }
+    body = {
+        "title": "One task despite duplicate delivery",
+        "prompt": "Two callers submit the same logical request at the same time.",
+    }
+
+    def submit():
+        return client.post("/api/v1/tasks", headers=headers, json=body)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(lambda _: submit(), range(2)))
+
+    assert [response.status_code for response in responses] == [201, 201]
+    assert responses[0].json()["id"] == responses[1].json()["id"]
+
+    listed = client.get("/api/v1/tasks?limit=100", headers=signed_in_client["headers"])
+    assert listed.status_code == 200
+    matching = [
+        item for item in listed.json()["items"]
+        if item["title"] == body["title"]
+    ]
+    assert len(matching) == 1
