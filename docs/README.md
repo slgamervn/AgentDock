@@ -12,6 +12,7 @@ This directory separates **verified implementation state**, **approved product d
 | [Roadmap](ROADMAP.md) | Completed foundations and remaining delivery gates | Evidence-based status |
 | [Technical research and decisions](TECHNICAL_RESEARCH.md) | Current external references and engineering decisions | Research baseline |
 | [Design reference guide](DESIGN_REFERENCE_GUIDE.md) | How to use the saved design and engineering references | Guidance |
+| [Reference application](REFERENCE_APPLICATION.md) | Maps saved skills and links to concrete AgentDock architecture, security, Android, UI and QA decisions | Reviewed 2026-11-05 |
 
 ## Operational and trust documents
 
