@@ -203,7 +203,19 @@ These are optional and mostly not part of the Android core:
 - Android-specific Liquid Glass experiments are not the visual direction for AgentDock; keep the app native, restrained and efficient.
 
 
-## 11. GitHub Actions supply-chain baseline
+## 9. Application order
+
+1. **Now — baseline discipline:** preserve current architecture; add security and reference review to implementation checklists; maintain the current single-agent-first roadmap.
+2. **Before first remote task:** finish authentication/session revocation, task API, idempotency, ordered events, worker leases and recovery.
+3. **First agent slice:** one provider adapter, one Main Agent, one read-only tool, bounded context and evidence-backed verification.
+4. **Before side-effect tools:** Policy Engine, exact-action approvals, audit, credential broker and tool-specific tests.
+5. **Before specialist agents:** establish single-agent evaluation baseline; add Researcher/Developer/Tester/Reviewer only when measurable.
+6. **Before coding execution:** isolate workspace, deny-by-default egress, resource limits, secret isolation and sandbox tests.
+7. **Before visual expansion:** validate task timeline and approval UX with real mobile references; keep the Android UI quiet and native.
+8. **Before production:** threat model, supply-chain review, accessibility, device matrix, backup/restore, privacy/consent review and signed update-over-install tests.
+
+
+## 10. GitHub Actions supply-chain baseline
 
 GitHub recommends pinning third-party actions to a full-length commit SHA because version tags can be moved. Keep a human-readable upstream release comment beside each immutable SHA, and review updates through Dependabot or a deliberate release/SHA verification. Do not copy an abbreviated SHA into a workflow.
 
@@ -224,20 +236,8 @@ Workflow permission boundaries remain explicit: Android/backend CI use `contents
 
 Before changing a pin, verify the exact upstream release, full commit SHA, action compatibility and Node runner requirements. Re-run all affected workflows after updates. A pin table is a dated record, not a promise that the selected version remains latest.
 
-## 12. Application order
 
-## 9. Application order
-
-1. **Now — baseline discipline:** preserve current architecture; add security and reference review to implementation checklists; maintain the current single-agent-first roadmap.
-2. **Before first remote task:** finish authentication/session revocation, task API, idempotency, ordered events, worker leases and recovery.
-3. **First agent slice:** one provider adapter, one Main Agent, one read-only tool, bounded context and evidence-backed verification.
-4. **Before side-effect tools:** Policy Engine, exact-action approvals, audit, credential broker and tool-specific tests.
-5. **Before specialist agents:** establish single-agent evaluation baseline; add Researcher/Developer/Tester/Reviewer only when measurable.
-6. **Before coding execution:** isolate workspace, deny-by-default egress, resource limits, secret isolation and sandbox tests.
-7. **Before visual expansion:** validate task timeline and approval UX with real mobile references; keep the Android UI quiet and native.
-8. **Before production:** threat model, supply-chain review, accessibility, device matrix, backup/restore, privacy/consent review and signed update-over-install tests.
-
-## 13. Acceptance gates for every future change
+## 11. Acceptance gates for every future change
 
 - Research current official documentation and inspect the exact repository files before editing.
 - Identify compatibility, licensing, security, privacy, accessibility, performance and migration risks.
