@@ -242,6 +242,7 @@ The following pins were verified against upstream release commits on 2026-11-05:
 | `android-actions/setup-android` | `v4.0.4` | `be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd` |
 | `actions/setup-python` | `v6.3.0` | `ece7cb06caefa5fff74198d8649806c4678c61a1` |
 | `actions/upload-artifact` | `v7.0.2` | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` |
+| `ReactiveCircus/android-emulator-runner` | `v2.38.0` | `a421e43855164a8197daf9d8d40fe71c6996bb0d` |
 
 The Android emulator runner in the existing Android workflow was already pinned to a full commit SHA and remains unchanged. The selected `gradle/actions` release includes the upstream fix for GHSA-chpw-2mqm-95cc.
 
