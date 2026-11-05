@@ -202,6 +202,30 @@ These are optional and mostly not part of the Android core:
 - GSAP (https://gsap.com/), Three.js (https://threejs.org/), Remotion (https://www.remotion.dev/), FFmpeg (https://ffmpeg.org/), Blender (https://www.blender.org/), Rapier (https://rapier.rs/), MediaPipe (https://mediapipe.google.com/), Vanta (https://www.vantajs.com/), Zdog (https://zzz.dog/), glfx.js (https://github.com/evanw/glfx.js), PixiJS filters (https://github.com/pixijs/filters) and VFX-JS (https://github.com/fand/vfx-js) are not default dependencies for AgentDock. Consider them only for a concrete artifact or companion-web requirement with a performance and maintenance case.
 - Android-specific Liquid Glass experiments are not the visual direction for AgentDock; keep the app native, restrained and efficient.
 
+
+## 11. GitHub Actions supply-chain baseline
+
+GitHub recommends pinning third-party actions to a full-length commit SHA because version tags can be moved. Keep a human-readable upstream release comment beside each immutable SHA, and review updates through Dependabot or a deliberate release/SHA verification. Do not copy an abbreviated SHA into a workflow.
+
+The following pins were verified against upstream release commits on 2026-11-05:
+
+| Action | Release | Commit SHA |
+|---|---|---|
+| `actions/checkout` | `v7.0.1` | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
+| `actions/setup-java` | `v6.1.0` | `b843ebf9b913146b38da2eaa7aeddf76074ae1ad` |
+| `gradle/actions` | `v6.4.1` | `8da46b539cd8fe6ab27ca75128919a18d757604c` |
+| `android-actions/setup-android` | `v4.0.4` | `be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd` |
+| `actions/setup-python` | `v6.3.0` | `ece7cb06caefa5fff74198d8649806c4678c61a1` |
+| `actions/upload-artifact` | `v7.0.2` | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` |
+
+The Android emulator runner in the existing Android workflow was already pinned to a full commit SHA and remains unchanged. The selected `gradle/actions` release includes the upstream fix for GHSA-chpw-2mqm-95cc.
+
+Workflow permission boundaries remain explicit: Android/backend CI use `contents: read`; APK publishing uses `contents: write` because it creates a GitHub Release. The repository currently has no AI coding-agent Actions step, so Trail of Bits' `agentic-actions-auditor` is not applicable to the current workflows; run it if an AI agent is later introduced into CI. Apply general GitHub Actions security review to all workflows regardless.
+
+Before changing a pin, verify the exact upstream release, full commit SHA, action compatibility and Node runner requirements. Re-run all affected workflows after updates. A pin table is a dated record, not a promise that the selected version remains latest.
+
+## 12. Application order
+
 ## 9. Application order
 
 1. **Now — baseline discipline:** preserve current architecture; add security and reference review to implementation checklists; maintain the current single-agent-first roadmap.
@@ -213,7 +237,7 @@ These are optional and mostly not part of the Android core:
 7. **Before visual expansion:** validate task timeline and approval UX with real mobile references; keep the Android UI quiet and native.
 8. **Before production:** threat model, supply-chain review, accessibility, device matrix, backup/restore, privacy/consent review and signed update-over-install tests.
 
-## 10. Acceptance gates for every future change
+## 13. Acceptance gates for every future change
 
 - Research current official documentation and inspect the exact repository files before editing.
 - Identify compatibility, licensing, security, privacy, accessibility, performance and migration risks.
