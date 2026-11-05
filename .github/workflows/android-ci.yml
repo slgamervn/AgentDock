@@ -51,7 +51,7 @@ jobs:
         run: ./gradlew --no-daemon --stacktrace lintDebug testDebugUnitTest assembleDebug :macrobenchmark:assembleBenchmark
 
       - name: Run app Compose UI tests on Android 36
-        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 36
           emulator-boot-timeout: 600
