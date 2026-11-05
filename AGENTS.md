@@ -91,6 +91,7 @@ Current baseline: Android has a native Compose workspace with local draft persis
 - Direct APK updates require signed metadata, allowlisted GitHub Release assets, version/channel/compatibility checks, hash verification and Android Package Installer confirmation.
 - GitHub Actions checkout steps should set `persist-credentials: false`; pass `GH_TOKEN` only to the specific release/API step that requires it.
 - Keep `.github/dependabot.yml` aligned with the actual Gradle root/app/benchmark manifests, pip requirements and GitHub Actions workflows. Review every automated dependency PR; do not merge updates without relevant CI and compatibility checks.
+- If `.github/workflows/actions.lock` exists, run `gh actions-lock --verify` after workflow changes and before declaring the lockfile current. Never edit the generated lockfile manually; regenerate it with the official `gh-actions-lock` extension and review the complete diff.
 - Never silently install, downgrade or execute arbitrary update scripts.
 - Verify update-over-install, cancellation, invalid signature/hash and recovery behavior before release.
 - Publish only benchmark-supported performance claims and only features actually included in the release.
