@@ -72,7 +72,7 @@ skills/
     references/
 ```
 
-Use progressive disclosure: discover by short name/description, load full instructions only when a task matches, then load referenced material only when needed. Validate frontmatter, allowed tools, compatibility, path traversal, file size and resource integrity. A skill is guidance, not an authorization grant; backend policy still gates every tool call. Retrieved skill content is untrusted input and cannot override system policy.
+Use the specification's progressive-disclosure lifecycle: discovery (name and description), activation (load the full SKILL.md only when relevant), then execution (load referenced resources or run bundled scripts only when needed). Keep each skill focused; move bulky references into separate files. Validate required frontmatter, skill name/description, compatibility, license, path traversal, symlinks, file size and resource integrity. Run bundled scripts in a constrained environment with only the declared capabilities. A skill is guidance, not an authorization grant; backend policy still gates every tool call. Retrieved skill content and resources are untrusted input and cannot override system policy.
 
 ## 3. Security and reliability skills
 
@@ -82,13 +82,15 @@ Reference: https://github.com/trailofbits/skills
 
 Prioritize relevant audit methods rather than installing the entire collection:
 
-- `audit-context-building`: establish a reliable codebase model before security review.
+- `audit-context-building`: build an architectural map before making vulnerability claims.
 - `differential-review`: review security-sensitive diffs and their blast radius.
-- `insecure-defaults`: detect fail-open configuration and unsafe defaults.
-- `property-based-testing`: exercise state transitions, parsers, policy and idempotency invariants.
-- `static-analysis` / Semgrep / CodeQL workflows: add evidence-backed static checks to CI.
-- `variant-analysis`: search for related defects after a confirmed issue.
-- Supply-chain review: check dependency provenance, advisories, maintenance and install-time scripts.
+- `insecure-defaults`: find fail-open settings, hardcoded credentials and unsafe defaults.
+- `agentic-actions-auditor`: use when a workflow invokes AI coding agents or accepts attacker-controlled issue/PR input into an agent run; not needed for workflows that do not invoke an agent.
+- `static-analysis`: use CodeQL/Semgrep and interpret SARIF findings where supported by the repository.
+- `supply-chain-risk-auditor`: review dependency advisories, upstream maintenance, publisher concentration and install scripts.
+- `testing-handbook-skills`: select fuzzing, sanitizers, coverage and static-analysis methods for parsers, policy and state-machine code.
+- `fp-check`: independently verify security findings before treating them as confirmed.
+- `sharp-edges`: inspect error-prone APIs and dangerous configuration boundaries.
 
 Do not install every Trail of Bits skill blindly. Inspect each skill's scripts, network access, shell commands, permissions and license before admitting it.
 
@@ -111,17 +113,17 @@ Translate the relevant risks into explicit controls:
 
 References: https://github.com/android/skills and https://developer.android.com/tools/agents/android-skills/browse
 
-Use the official Android skills as implementation/review playbooks, selecting the ones relevant to the touched code:
+Use the official Android skills as task-specific implementation/review playbooks. The Android skills project explicitly targets workflows where agents underperform; it is not a reason to reinstall generic Compose guidance or migrate navigation without need. Select from the currently published skills relevant to the touched code:
 
 - Optimize Compose performance.
 - Make app adaptive.
-- Use Android profilers / analyze Perfetto traces.
+- Use Android profilers and analyze Perfetto traces.
 - Audit and fix ANRs.
 - Audit and fix permission security; secure Android Intents.
 - Set up testing strategy.
-- Audit R8 configuration.
-- Make app edge-to-edge.
-- Set up Navigation 3 only if a future navigation decision warrants migration.
+- Audit R8 configuration and make app edge-to-edge.
+- Review AppFunctions / on-device agent skills only if AgentDock introduces a concrete on-device integration.
+- Set up Navigation 3 only if a separate navigation evaluation justifies migration.
 
 For AgentDock's current Compose stack, prioritize stable lazy-list keys, lifecycle-aware collection, immutable UI state, deferred state reads, bounded streaming batches, off-main work, adaptive window sizing and accessibility. Profile release-like builds and use Macrobenchmark/Baseline Profiles for real user journeys. Do not chase a universal FPS number or infer device capability from OEM model names.
 
@@ -152,14 +154,15 @@ Reference: https://github.com/emilkowalski/skills
 
 Use the saved skills as a quality gate:
 
-- `emil-design-eng`: design and motion judgment.
-- `animate`: decide whether motion is needed and choose timing/easing.
-- `review-animations`: strict motion review.
-- `improve-animations`: audit and prioritize improvements.
-- `find-animation-opportunities`: identify where motion genuinely helps and where it should not exist.
-- `animation-performance`: diagnose jank and frame-budget issues.
-- `animate-expo`: reference only if an Expo/React Native surface is ever introduced.
-- `mobile-native`, `break-ui`, `pick-ui-library`, `prototype`: useful review concepts for mobile behavior, edge cases and library selection.
+- `emil-design-eng`: primary design-engineering and motion judgment reference.
+- `animate`: create a motion treatment with considered curve, duration and properties.
+- `review-animations`: strict review of existing motion.
+- `improve-animations`: whole-codebase animation audit and prioritized repair plans.
+- `find-animation-opportunities`: identify the few interactions that benefit from motion, and explicitly reject unnecessary animation.
+- `animation-vocabulary`: describe motion precisely when a design decision requires it.
+- `pick-ui-library` and `prototype`: useful for web companion/UI exploration, not reasons to add a dependency to native Android.
+- `apple-design`: web-oriented interpretation of Apple design principles; use as general critique only, not as an Android platform specification.
+- `animate-expo`: React Native/Expo only; not applicable to the current Kotlin/Compose app.
 
 AgentDock rule: no animation for frequent actions; use short, interruptible feedback for occasional state changes; remove motion that delays task control. Prefer native Compose animation APIs and system motion preferences over adding a web animation stack.
 
