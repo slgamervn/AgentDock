@@ -10,15 +10,23 @@ updates:
       timezone: Asia/Ho_Chi_Minh
     open-pull-requests-limit: 2
 
-  # Android application and Macrobenchmark Gradle build files.
+  # Root plugins/wrapper, Android app and Macrobenchmark modules.
+  # Group the same dependency across modules into one version-update PR.
   - package-ecosystem: gradle
-    directory: /
+    directories:
+      - /
+      - /app
+      - /macrobenchmark
     schedule:
       interval: weekly
       day: monday
       time: "02:15"
       timezone: Asia/Ho_Chi_Minh
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 3
+    groups:
+      gradle-module-dependencies:
+        applies-to: version-updates
+        group-by: dependency-name
 
   # Runtime and development requirements in backend/requirements*.txt.
   - package-ecosystem: pip
