@@ -232,7 +232,7 @@ The following pins were verified against upstream release commits on 2026-11-05:
 
 The Android emulator runner in the existing Android workflow was already pinned to a full commit SHA and remains unchanged. The selected `gradle/actions` release includes the upstream fix for GHSA-chpw-2mqm-95cc.
 
-Workflow permission boundaries remain explicit: Android/backend CI use `contents: read`; APK publishing uses `contents: write` because it creates a GitHub Release. The repository currently has no AI coding-agent Actions step, so Trail of Bits' `agentic-actions-auditor` is not applicable to the current workflows; run it if an AI agent is later introduced into CI. Apply general GitHub Actions security review to all workflows regardless.
+Workflow permission boundaries remain explicit: Android/backend CI use `contents: read`; APK publishing uses `contents: write` because it creates a GitHub Release. All three workflows also set `persist-credentials: false` on checkout; the release job provides `GH_TOKEN` only to the release-creation step, rather than retaining checkout credentials in Git configuration. The repository currently has no AI coding-agent Actions step, so Trail of Bits' `agentic-actions-auditor` is not applicable to the current workflows; run it if an AI agent is later introduced into CI. Apply general GitHub Actions security review to all workflows regardless.
 
 Before changing a pin, verify the exact upstream release, full commit SHA, action compatibility and Node runner requirements. Re-run all affected workflows after updates. A pin table is a dated record, not a promise that the selected version remains latest.
 
