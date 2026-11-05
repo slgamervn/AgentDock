@@ -236,6 +236,8 @@ Workflow permission boundaries remain explicit: Android/backend CI use `contents
 
 Before changing a pin, verify the exact upstream release, full commit SHA, action compatibility and Node runner requirements. Re-run all affected workflows after updates. A pin table is a dated record, not a promise that the selected version remains latest.
 
+Dependabot is configured in `.github/dependabot.yml` for GitHub Actions, Gradle and pip, on a weekly Asia/Ho_Chi_Minh schedule with at most two version-update PRs per ecosystem. The configuration only requests update PRs; it does not approve or merge them. Every PR still requires compatibility review and the appropriate CI checks. Security-update enablement is a separate repository setting and must be verified in GitHub rather than assumed from this file.
+
 
 ## 11. Acceptance gates for every future change
 
