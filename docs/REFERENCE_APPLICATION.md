@@ -217,7 +217,7 @@ These are optional and mostly not part of the Android core:
 
 ## 10. GitHub Actions supply-chain baseline
 
-GitHub recommends pinning third-party actions to a full-length commit SHA because version tags can be moved. Keep a human-readable upstream release comment beside each immutable SHA, and review updates through Dependabot or a deliberate release/SHA verification. Do not copy an abbreviated SHA into a workflow.
+GitHub recommends pinning third-party actions to a full-length commit SHA because version tags can be moved. GitHub's current workflow dependency lockfiles provide an even stronger option by pinning direct and transitive action dependencies; evaluate adoption separately rather than mixing lockfile rollout into this small CI change. Keep a human-readable upstream release comment beside each immutable SHA, and review updates through Dependabot or a deliberate release/SHA verification. Do not copy an abbreviated SHA into a workflow.
 
 The following pins were verified against upstream release commits on 2026-11-05:
 
@@ -236,7 +236,7 @@ Workflow permission boundaries remain explicit: Android/backend CI use `contents
 
 Before changing a pin, verify the exact upstream release, full commit SHA, action compatibility and Node runner requirements. Re-run all affected workflows after updates. A pin table is a dated record, not a promise that the selected version remains latest.
 
-Dependabot is configured in `.github/dependabot.yml` for GitHub Actions, Gradle and pip, on a weekly Asia/Ho_Chi_Minh schedule with at most two version-update PRs per ecosystem. The configuration only requests update PRs; it does not approve or merge them. Every PR still requires compatibility review and the appropriate CI checks. Security-update enablement is a separate repository setting and must be verified in GitHub rather than assumed from this file.
+Dependabot is configured in `.github/dependabot.yml` for GitHub Actions, Gradle across `/`, `/app` and `/macrobenchmark`, and pip under `/backend`, on a weekly Asia/Ho_Chi_Minh schedule. Shared Gradle dependency updates are grouped by dependency name across modules; version-update PR limits are bounded per ecosystem. The configuration only requests update PRs; it does not approve or merge them. Every PR still requires compatibility review and the appropriate CI checks. Security-update enablement is a separate repository setting and must be verified in GitHub rather than assumed from this file.
 
 
 ## 11. Acceptance gates for every future change
