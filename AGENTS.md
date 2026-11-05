@@ -89,6 +89,7 @@ Current baseline: Android has a native Compose workspace with local draft persis
 
 - Keep Stable and Preview clearly separated and preserve signing-certificate continuity.
 - Direct APK updates require signed metadata, allowlisted GitHub Release assets, version/channel/compatibility checks, hash verification and Android Package Installer confirmation.
+- GitHub Actions checkout steps should set `persist-credentials: false`; pass `GH_TOKEN` only to the specific release/API step that requires it.
 - Never silently install, downgrade or execute arbitrary update scripts.
 - Verify update-over-install, cancellation, invalid signature/hash and recovery behavior before release.
 - Publish only benchmark-supported performance claims and only features actually included in the release.
